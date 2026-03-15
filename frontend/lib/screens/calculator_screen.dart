@@ -1,0 +1,364 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../app_theme.dart';
+import '../providers/theme_provider.dart';
+import '../providers/user_provider.dart';
+import 'home_screen.dart' show PairInfo;
+
+// ─── INSTRUMENT PROFILE ─────────────────────────────────────────────────────
+class _Prof {
+  final double pipSize, pipValPerLot, contractSize;
+  const _Prof(this.pipSize, this.pipValPerLot, this.contractSize);
+}
+
+_Prof _getProfile(String pair, double price) {
+  if (pair == 'XAUUSD') return const _Prof(0.01, 1.0, 100.0);
+  if (pair == 'BTCUSD') return const _Prof(1.0,  1.0, 1.0);
+  if (pair == 'ETHUSD') return const _Prof(0.01, 1.0, 1.0);
+  if (pair.contains('JPY')) return _Prof(0.01, (0.01 / price) * 100000, 100000.0);
+  return const _Prof(0.0001, 10.0, 100000.0);
+}
+
+String _speed(String pair) {
+  if (pair == 'BTCUSD') return '⚡ ULTRA FAST — BTC moves \$1000s/day';
+  if (pair == 'ETHUSD') return '⚡ FAST — ETH moves \$100s/day';
+  if (pair == 'XAUUSD') return '🔥 FAST — Gold ~1500 pips/day';
+  if (pair == 'USDJPY') return '⚡ FAST — JPY 80–150 pips/day (high pip \$)';
+  if (pair == 'GBPUSD') return '🔥 MODERATE-FAST — GBP 80–120 pips/day';
+  if (pair == 'EURUSD') return '🟡 MODERATE — EUR 60–100 pips/day';
+  if (pair == 'AUDUSD' || pair == 'NZDUSD') return '🟢 SLOW — AUD/NZD 40–70 pips/day, need patience';
+  return '🟡 MODERATE — Check ATR for this pair';
+}
+
+class _Result {
+  final double sl, tp, slPips, tpPips, rr;
+  final double riskUsd, lots, units, pipVal;
+  final double notional, lev;
+  final double profitUsd, profitPct, lossUsd, lossPct;
+  const _Result({
+    required this.sl, required this.tp, required this.slPips, required this.tpPips, required this.rr,
+    required this.riskUsd, required this.lots, required this.units, required this.pipVal,
+    required this.notional, required this.lev,
+    required this.profitUsd, required this.profitPct, required this.lossUsd, required this.lossPct,
+  });
+}
+
+_Result? _calc({required String pair, required double balance, required double entry,
+  required double riskPct, required double rrRatio, double? slP, double? tpP}) {
+  if (balance <= 0 || entry <= 0 || riskPct <= 0 || rrRatio <= 0) return null;
+  final p = _getProfile(pair, entry);
+  final riskUsd = balance * (riskPct / 100);
+  double sl, tp;
+  if (slP != null && slP > 0) { sl = slP; tp = entry + (entry - sl).abs() * rrRatio; }
+  else if (tpP != null && tpP > 0) { tp = tpP; sl = entry - (tp - entry).abs() / rrRatio; }
+  else { final buf = entry * 0.005; sl = entry - buf; tp = entry + buf * rrRatio; }
+  final slPips = (entry - sl).abs() / p.pipSize;
+  final tpPips = (tp - entry).abs() / p.pipSize;
+  final lots = riskUsd / (slPips * p.pipValPerLot);
+  final units = lots * p.contractSize;
+  final notional = units * entry;
+  final profitUsd = tpPips * p.pipValPerLot * lots;
+  final lossUsd   = slPips * p.pipValPerLot * lots;
+  return _Result(sl: sl, tp: tp, slPips: slPips, tpPips: tpPips, rr: tpPips / slPips,
+    riskUsd: riskUsd, lots: lots, units: units, pipVal: p.pipValPerLot,
+    notional: notional, lev: notional > 0 ? notional / balance : 0,
+    profitUsd: profitUsd, profitPct: (profitUsd / balance) * 100,
+    lossUsd: lossUsd,    lossPct:  (lossUsd / balance) * 100);
+}
+
+// =============================================================================
+// SCREEN
+// =============================================================================
+class CalculatorScreen extends StatefulWidget {
+  final PairInfo pair;
+  const CalculatorScreen({super.key, required this.pair});
+  @override State<CalculatorScreen> createState() => _CalcState();
+}
+
+class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateMixin {
+  final _bal  = TextEditingController(text: '10000');
+  final _ent  = TextEditingController();
+  final _risk = TextEditingController(text: '1.0');
+  final _rr   = TextEditingController(text: '5.0');
+  final _sl   = TextEditingController();
+  final _tp   = TextEditingController();
+  _Result? _r;
+  String?  _err;
+  late AnimationController _ac;
+  late Animation<double>   _fade;
+
+  @override void initState() {
+    super.initState();
+    _ac = AnimationController(vsync: this, duration: const Duration(milliseconds: 380));
+    _fade = CurvedAnimation(parent: _ac, curve: Curves.easeOut);
+  }
+  @override void dispose() {
+    _ac.dispose();
+    for (final c in [_bal, _ent, _risk, _rr, _sl, _tp]) c.dispose();
+    super.dispose();
+  }
+
+  void _calculate() {
+    FocusScope.of(context).unfocus();
+    setState(() => _err = null);
+    final b = double.tryParse(_bal.text);
+    final e = double.tryParse(_ent.text);
+    final r = double.tryParse(_risk.text);
+    final rr = double.tryParse(_rr.text);
+    final sl = double.tryParse(_sl.text);
+    final tp = double.tryParse(_tp.text);
+    if (b == null || b <= 0)  { setState(() => _err = 'Enter valid balance'); return; }
+    if (e == null || e <= 0)  { setState(() => _err = 'Enter valid entry price'); return; }
+    if (r == null || r <= 0)  { setState(() => _err = 'Enter valid risk % (e.g. 1.0)'); return; }
+    if (rr == null || rr <= 0){ setState(() => _err = 'Enter valid R:R (e.g. 5.0)'); return; }
+    setState(() => _r = _calc(pair: widget.pair.symbol, balance: b, entry: e, riskPct: r, rrRatio: rr,
+      slP: (sl != null && sl > 0) ? sl : null, tpP: (tp != null && tp > 0) ? tp : null));
+    _ac.forward(from: 0);
+  }
+
+  @override Widget build(BuildContext context) {
+    final isDark = context.watch<ThemeProvider>().isDark;
+    final bg   = isDark ? kDarkBg      : kLightBg;
+    final card = isDark ? kDarkCard    : kLightCard;
+    final text = isDark ? kDarkText    : kLightText;
+    final sub  = isDark ? kDarkSubText : kLightSubText;
+    final p    = widget.pair;
+
+    return Scaffold(
+      backgroundColor: bg,
+      body: SafeArea(child: Column(children: [
+        // Top bar
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 10, 16, 0),
+          child: Row(children: [
+            IconButton(
+              icon: Icon(Icons.arrow_back_ios_new_rounded, color: text, size: 20),
+              onPressed: () => Navigator.pop(context),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: p.accent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: p.accent.withValues(alpha: 0.3)),
+              ),
+              child: Text(p.label, style: TextStyle(color: p.accent, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1)),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.04), borderRadius: BorderRadius.circular(8)),
+              child: Text(p.category, style: TextStyle(color: sub, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+            ),
+          ]),
+        ),
+
+        Expanded(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+              // Speed insight
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06))),
+                child: Text(_speed(p.symbol), style: TextStyle(color: sub, fontSize: 12, fontWeight: FontWeight.w600)),
+              ),
+              const SizedBox(height: 16),
+
+              _sec('TRADE PARAMETERS', sub),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: _inp('BALANCE (\$)', _bal, '10000', isDark, text, p.accent)),
+                const SizedBox(width: 10),
+                Expanded(child: _inp('ENTRY PRICE', _ent, 'e.g. 1.0850', isDark, text, p.accent)),
+              ]),
+              Row(children: [
+                Expanded(child: _inp('RISK %', _risk, '1.0', isDark, text, p.accent)),
+                const SizedBox(width: 10),
+                Expanded(child: _inp('REWARD RATIO (1:X)', _rr, '5.0', isDark, text, p.accent)),
+              ]),
+              const SizedBox(height: 4),
+              _sec('OPTIONAL — Provide SL or TP (other auto-calculates via RR)', sub),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: _inp('STOP LOSS', _sl, 'Optional', isDark, text, p.accent)),
+                const SizedBox(width: 10),
+                Expanded(child: _inp('TARGET PRICE', _tp, 'Optional', isDark, text, p.accent)),
+              ]),
+
+              if (_err != null) ...[
+                Container(
+                  width: double.infinity, padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.3))),
+                  child: Text(_err!, style: const TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(height: 10),
+              ],
+
+              // CALCULATE button
+              _GlowBtn(label: '▶  CALCULATE', color: p.accent, onTap: _calculate),
+
+              // Results
+              if (_r != null)
+                FadeTransition(opacity: _fade, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const SizedBox(height: 22),
+                  Divider(color: isDark ? Colors.white10 : Colors.black12),
+                  const SizedBox(height: 14),
+
+                  Row(children: [
+                    _card('STOP LOSS', '\$${_f(_r!.sl)}', Colors.redAccent, '${_f2(_r!.slPips)} pips', card, isDark),
+                    const SizedBox(width: 10),
+                    _card('TAKE PROFIT', '\$${_f(_r!.tp)}', const Color(0xFF00C853), '${_f2(_r!.tpPips)} pips', card, isDark),
+                  ]),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    _card('ACTUAL R:R', '1 : ${_r!.rr.toStringAsFixed(2)}', const Color(0xFFFFC107), 'Reward Ratio', card, isDark),
+                    const SizedBox(width: 10),
+                    _card('LEVERAGE', '${_r!.lev.toStringAsFixed(1)}x', const Color(0xFFFF7043), '\$${_fL(_r!.notional)} notional', card, isDark),
+                  ]),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    _card('LOT SIZE', _r!.lots.toStringAsFixed(4), text, '${_fL(_r!.units)} units', card, isDark),
+                    const SizedBox(width: 10),
+                    _card('PIP VALUE', '\$${_f(_r!.pipVal)}', const Color(0xFF29B6F6), 'per standard lot', card, isDark),
+                  ]),
+
+                  const SizedBox(height: 18),
+                  _sec('PROFIT / LOSS PROJECTION', sub),
+                  const SizedBox(height: 10),
+
+                  Row(children: [
+                    _plCard('✅ TARGET HIT', '+\$${_r!.profitUsd.toStringAsFixed(2)}',
+                      '+${_r!.profitPct.toStringAsFixed(2)}% of account', const Color(0xFF00C853), card),
+                    const SizedBox(width: 10),
+                    _plCard('🛑 SL HIT', '-\$${_r!.lossUsd.toStringAsFixed(2)}',
+                      '-${_r!.lossPct.toStringAsFixed(2)}% of account', Colors.redAccent, card),
+                  ]),
+                  const SizedBox(height: 10),
+
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: card, borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFFF7043).withValues(alpha: 0.28)),
+                    ),
+                    child: Row(children: [
+                      Icon(Icons.shield_outlined, color: const Color(0xFFFF7043).withValues(alpha: 0.8), size: 22),
+                      const SizedBox(width: 12),
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('MAX RISK AMOUNT', style: TextStyle(color: sub, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                        const SizedBox(height: 4),
+                        Text('\$${_r!.riskUsd.toStringAsFixed(2)}  (${_r!.lossPct.toStringAsFixed(2)}% of balance)',
+                          style: const TextStyle(color: Color(0xFFFF7043), fontSize: 17, fontWeight: FontWeight.w900)),
+                      ]),
+                    ]),
+                  ),
+                ])),
+            ]),
+          ),
+        ),
+      ])),
+    );
+  }
+
+  Widget _sec(String t, Color c) => Text(t,
+    style: TextStyle(color: c, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5));
+
+  Widget _inp(String label, TextEditingController ctrl, String hint, bool isDark, Color text, Color accent) =>
+    Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: TextStyle(color: isDark ? kSeaBlue : kSeaBlue, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+        const SizedBox(height: 4),
+        TextField(
+          controller: ctrl,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: text),
+          decoration: InputDecoration(
+            hintText: hint,
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: accent, width: 1.5)),
+          ),
+        ),
+      ]),
+    );
+
+  Widget _card(String title, String val, Color color, String sub, Color card, bool isDark) => Expanded(
+    child: Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.22))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title, style: TextStyle(color: isDark ? kDarkSubText : kLightSubText, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+        const SizedBox(height: 7),
+        FittedBox(alignment: Alignment.centerLeft, fit: BoxFit.scaleDown,
+          child: Text(val, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w900, fontFamily: 'monospace'))),
+        const SizedBox(height: 4),
+        Text(sub, style: TextStyle(color: color.withValues(alpha: 0.55), fontSize: 10, fontWeight: FontWeight.bold)),
+      ]),
+    ),
+  );
+
+  Widget _plCard(String title, String val, String sub, Color color, Color card) => Expanded(
+    child: Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.3))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title, style: TextStyle(color: color.withValues(alpha: 0.75), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+        const SizedBox(height: 7),
+        FittedBox(alignment: Alignment.centerLeft, fit: BoxFit.scaleDown,
+          child: Text(val, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w900, fontFamily: 'monospace'))),
+        const SizedBox(height: 4),
+        Text(sub, style: TextStyle(color: color.withValues(alpha: 0.6), fontSize: 10, fontWeight: FontWeight.bold)),
+      ]),
+    ),
+  );
+
+  String _f(double v) {
+    if (v.abs() >= 10000) return v.toStringAsFixed(2);
+    if (v.abs() >= 1)     return v.toStringAsFixed(4);
+    return v.toStringAsFixed(5);
+  }
+  String _f2(double v) => v >= 100 ? v.toStringAsFixed(1) : v.toStringAsFixed(2);
+  String _fL(double v) {
+    if (v >= 1e6)  return '${(v/1e6).toStringAsFixed(2)}M';
+    if (v >= 1000) return '${(v/1000).toStringAsFixed(1)}K';
+    return v.toStringAsFixed(2);
+  }
+}
+
+// ─── GLOW BUTTON ─────────────────────────────────────────────────────────────
+class _GlowBtn extends StatefulWidget {
+  final String label; final Color color; final VoidCallback onTap;
+  const _GlowBtn({required this.label, required this.color, required this.onTap});
+  @override State<_GlowBtn> createState() => _GlowBtnState();
+}
+class _GlowBtnState extends State<_GlowBtn> with SingleTickerProviderStateMixin {
+  late final AnimationController _ac;
+  late final Animation<double> _sc;
+  @override void initState() {
+    super.initState();
+    _ac = AnimationController(vsync: this, duration: const Duration(milliseconds: 100));
+    _sc = Tween(begin: 1.0, end: 0.96).animate(CurvedAnimation(parent: _ac, curve: Curves.easeOut));
+  }
+  @override void dispose() { _ac.dispose(); super.dispose(); }
+  @override Widget build(BuildContext context) => ScaleTransition(scale: _sc,
+    child: GestureDetector(
+      onTapDown: (_) => _ac.forward(), onTapUp: (_) { _ac.reverse(); widget.onTap(); },
+      onTapCancel: () => _ac.reverse(),
+      child: Container(
+        width: double.infinity, height: 52,
+        decoration: BoxDecoration(
+          color: widget.color, borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: widget.color.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 4))],
+        ),
+        alignment: Alignment.center,
+        child: Text(widget.label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 1)),
+      ),
+    ),
+  );
+}
