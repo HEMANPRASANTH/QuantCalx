@@ -19,16 +19,7 @@ _Prof _getProfile(String pair, double price) {
   return const _Prof(0.0001, 10.0, 100000.0);
 }
 
-String _speed(String pair) {
-  if (pair == 'BTCUSD') return '⚡ ULTRA FAST — BTC moves \$1000s/day';
-  if (pair == 'ETHUSD') return '⚡ FAST — ETH moves \$100s/day';
-  if (pair == 'XAUUSD') return '🔥 FAST — Gold ~1500 pips/day';
-  if (pair == 'USDJPY') return '⚡ FAST — JPY 80–150 pips/day (high pip \$)';
-  if (pair == 'GBPUSD') return '🔥 MODERATE-FAST — GBP 80–120 pips/day';
-  if (pair == 'EURUSD') return '🟡 MODERATE — EUR 60–100 pips/day';
-  if (pair == 'AUDUSD' || pair == 'NZDUSD') return '🟢 SLOW — AUD/NZD 40–70 pips/day';
-  return '🟡 MODERATE — Check ATR for this pair';
-}
+
 
 class _Result {
   final double sl, tp, slPips, tpPips, rr;
@@ -89,6 +80,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
   final _risk = TextEditingController(text: '1.0');
   final _rr   = TextEditingController(text: '5.0');
   final _sl   = TextEditingController();
+  final _tp   = TextEditingController();
 
   bool _isBuy = true;
   _Result? _r;
@@ -110,18 +102,91 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
   void _calculate() {
     FocusScope.of(context).unfocus();
     setState(() => _err = null);
+
     final b = double.tryParse(_bal.text);
-    final e = double.tryParse(_ent.text);
-    final r = double.tryParse(_risk.text);
-    final rr = double.tryParse(_rr.text);
-    final sl = double.tryParse(_sl.text);
+    double? e = double.tryParse(_ent.text);
+    double? r = double.tryParse(_risk.text);
+    double? rr = double.tryParse(_rr.text);
+    double? sl = double.tryParse(_sl.text);
+    double? tp = double.tryParse(_tp.text);
+
     if (b == null || b <= 0)  { setState(() => _err = 'Enter valid balance'); return; }
-    if (e == null || e <= 0)  { setState(() => _err = 'Enter valid entry price'); return; }
-    if (r == null || r <= 0)  { setState(() => _err = 'Enter valid risk % (e.g. 1.0)'); return; }
-    if (rr == null || rr <= 0){ setState(() => _err = 'Enter valid R:R (e.g. 5.0)'); return; }
-    setState(() => _r = _calc(pair: widget.pair.symbol, balance: b, entry: e, riskPct: r, rrRatio: rr,
-      isBuy: _isBuy, slP: (sl != null && sl > 0) ? sl : null));
+
+    // SOLVE FOR X LOGIC
+    final p = _getProfile(widget.pair.symbol, e ?? 1.0);
+
+    // 1. Missing Entry: We need Target, SL, and RR to figure it out
+    if (e == null || e <= 0) {
+      if (sl != null && tp != null && rr != null && rr > 0) {
+         // Entry is between SL and TP, driven by RR ratio
+         // Distance TP -> Entry = RR * Distance Entry -> SL
+         // TP - E = RR * (E - SL)   (if Buy)
+         // E = (TP + RR*SL) / (1 + RR)
+         e = (tp + (rr * sl)) / (1 + rr);
+         _ent.text = _fX(e);
+      } else {
+         setState(() => _err = 'Enter Entry Price (or provide SL, TP, & RR to auto-calculate)'); return;
+      }
+    }
+
+    // 2. We have Entry. Check Risk.
+    if (r == null || r <= 0) r = 1.0; // Default risk is 1.0%
+
+    // 3. Missing SL, Missing Target, Missing RR -> Provide Sane Defaults
+    if (sl == null && tp == null && rr == null) {
+      rr = 2.0; 
+      _rr.text = '2.0';
+    }
+
+    // 4. Missing RR -> Figure out from SL and TP
+    if ((rr == null || rr <= 0) && sl != null && tp != null) {
+       final distSL = (e - sl).abs();
+       final distTP = (tp - e).abs();
+       if (distSL > 0) {
+         rr = distTP / distSL;
+         _rr.text = rr.toStringAsFixed(2);
+       } else {
+         setState(() => _err = 'SL cannot equal Entry'); return;
+       }
+    }
+
+    // 5. Missing SL -> Figure out from TP and RR
+    if ((sl == null || sl <= 0) && tp != null && rr != null && rr > 0) {
+       final distTP = (tp - e).abs();
+       final distSL = distTP / rr;
+       sl = _isBuy ? e - distSL : e + distSL;
+       _sl.text = _fX(sl);
+    }
+
+    // 6. Missing TP -> Figure out from SL and RR
+    if ((tp == null || tp <= 0) && sl != null && sl > 0 && rr != null && rr > 0) {
+       final distSL = (e - sl).abs();
+       tp = _isBuy ? e + (distSL * rr) : e - (distSL * rr);
+       _tp.text = _fX(tp);
+    }
+
+    // Final Validation after Auto-Fill
+    if (rr == null || rr <= 0) { setState(() => _err = 'Enter valid R:R or SL/TP combo'); return; }
+
+    setState(() => _r = _calc(pair: widget.pair.symbol, balance: b, entry: e!, riskPct: r!, rrRatio: rr!,
+      isBuy: _isBuy, slP: sl));
+    
+    // Auto fill TP visual if not set
+    if (tp == null || tp <= 0) {
+      _tp.text = _fX(_r!.tp);
+    }
+    // Auto fill SL visual if not set
+    if (sl == null || sl <= 0) {
+      _sl.text = _fX(_r!.sl);
+    }
+
     _ac.forward(from: 0);
+  }
+
+  String _fX(double v) {
+    if (v.abs() >= 10000) return v.toStringAsFixed(2);
+    if (v.abs() >= 1)     return v.toStringAsFixed(4);
+    return v.toStringAsFixed(5);
   }
 
   @override Widget build(BuildContext context) {
@@ -167,72 +232,67 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
-              // Speed insight
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06))),
-                child: Text(_speed(p.symbol), style: TextStyle(color: sub, fontSize: 12, fontWeight: FontWeight.w600)),
-              ),
-              const SizedBox(height: 16),
-
-              _sec('TRADE PARAMETERS', sub),
+              _sec('TRADE DIRECTION', sub),
               const SizedBox(height: 8),
               Row(children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => setState(() => _isBuy = true),
+                    onTap: () => setState(() { _isBuy = true; _ac.reverse(); _r = null; }),
                     child: Container(
                       height: 48,
                       decoration: BoxDecoration(
                         color: _isBuy ? Colors.green.withValues(alpha: 0.15) : card,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: _isBuy ? Colors.green : Colors.white10),
+                        border: Border.all(color: _isBuy ? Colors.green : Colors.transparent),
                       ),
                       alignment: Alignment.center,
-                      child: Text('BUY (LONG)', style: TextStyle(color: _isBuy ? Colors.greenAccent : sub, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                      child: Text('BUY (LONG)', style: TextStyle(color: _isBuy ? Colors.greenAccent : text, fontWeight: FontWeight.bold, letterSpacing: 1)),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => setState(() => _isBuy = false),
+                    onTap: () => setState(() { _isBuy = false; _ac.reverse(); _r = null; }),
                     child: Container(
                       height: 48,
                       decoration: BoxDecoration(
                         color: !_isBuy ? Colors.red.withValues(alpha: 0.15) : card,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: !_isBuy ? Colors.red : Colors.white10),
+                        border: Border.all(color: !_isBuy ? Colors.red : Colors.transparent),
                       ),
                       alignment: Alignment.center,
-                      child: Text('SELL (SHORT)', style: TextStyle(color: !_isBuy ? Colors.redAccent : sub, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                      child: Text('SELL (SHORT)', style: TextStyle(color: !_isBuy ? Colors.redAccent : text, fontWeight: FontWeight.bold, letterSpacing: 1)),
                     ),
                   ),
                 ),
               ]),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              _sec('TRADE PARAMETERS', sub),
+              _sec('ACCOUNT & ENTRY', sub),
+              const SizedBox(height: 8),
+              _inpRow('TOTAL AMOUNT', _bal, '', isDark, text, p.accent),
+              const SizedBox(height: 8),
+              _inpRow('ENTRY PRICE', _ent, '', isDark, text, p.accent),
+              const SizedBox(height: 20),
+
+              _sec('RISK & REWARD', sub),
               const SizedBox(height: 8),
               Row(children: [
-                Expanded(child: _inp('BALANCE (\$)', _bal, '10000', isDark, text, p.accent)),
-                const SizedBox(width: 10),
-                Expanded(child: _inp('ENTRY PRICE', _ent, 'e.g. 1.0850', isDark, text, p.accent)),
+                Expanded(child: _inpCol('RISK %', _risk, '', isDark, text, p.accent)),
+                const SizedBox(width: 12),
+                Expanded(child: _inpCol('REWARD (R:R)', _rr, '', isDark, text, p.accent)),
               ]),
-              Row(children: [
-                Expanded(child: _inp('RISK %', _risk, '1.0', isDark, text, p.accent)),
-                const SizedBox(width: 10),
-                Expanded(child: _inp('MANDATORY R:R (1:X)', _rr, '5.0', isDark, text, p.accent)),
-              ]),
-              const SizedBox(height: 4),
-              _sec('OPTIONAL (Target calculcated directly via R:R)', sub),
+              const SizedBox(height: 20),
+
+              _sec('EXIT POINTS', sub),
               const SizedBox(height: 8),
               Row(children: [
-                Expanded(child: _inp('STOP LOSS EXCEPTION', _sl, 'Optional', isDark, text, p.accent)),
-                const SizedBox(width: 10),
-                Expanded(child: const SizedBox()),
+                Expanded(child: _inpCol('TARGET', _tp, '', isDark, text, p.accent)),
+                const SizedBox(width: 12),
+                Expanded(child: _inpCol('STOP LOSS', _sl, '', isDark, text, p.accent)),
               ]),
+              const SizedBox(height: 24),
 
               if (_err != null) ...[
                 Container(
@@ -307,19 +367,59 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
   Widget _sec(String t, Color c) => Text(t,
     style: TextStyle(color: c, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5));
 
-  Widget _inp(String label, TextEditingController ctrl, String hint, bool isDark, Color text, Color accent) =>
-    Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: TextStyle(color: isDark ? kSeaBlue : kSeaBlue, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
-        const SizedBox(height: 4),
-        TextField(
+  Widget _inpCol(String label, TextEditingController ctrl, String hint, bool isDark, Color text, Color accent) =>
+    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: TextStyle(color: text, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+      const SizedBox(height: 6),
+      Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: isDark ? kDarkCard : kLightCard,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: TextField(
           controller: ctrl,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: text),
           decoration: InputDecoration(
             hintText: hint,
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: accent, width: 1.5)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.black12)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: accent, width: 1.5)),
+          ),
+        ),
+      ),
+    ]);
+
+  Widget _inpRow(String label, TextEditingController ctrl, String hint, bool isDark, Color text, Color accent) =>
+    Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark ? kDarkCard : kLightCard,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
+      ),
+      child: Row(children: [
+        Expanded(
+          flex: 2,
+          child: Text(label, style: TextStyle(color: text, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+        ),
+        Expanded(
+          flex: 3,
+          child: TextField(
+            controller: ctrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: text),
+            textAlign: TextAlign.right,
+            decoration: InputDecoration(
+              hintText: hint,
+              isDense: true,
+              border: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              filled: false,
+              contentPadding: EdgeInsets.zero,
+            ),
           ),
         ),
       ]),

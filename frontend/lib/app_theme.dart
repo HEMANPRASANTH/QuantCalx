@@ -8,17 +8,17 @@ const kSeaBlue = Color(0xFF7C4DFF);  // Deep Purple / Vibrant Violet
 const kDarkBg      = Color(0xFF000000); // True AMOLED black
 const kDarkSurface = Color(0xFF0A0E14);
 const kDarkCard    = Color(0xFF0D1520);
-const kDarkText    = Colors.white;
+const kDarkText    = Color(0xFFFFFFFF); // Guaranteed White on Dark
 const kDarkSubText = Color(0xFFB0BEC5);
-const kOnSeaBlue   = Colors.black;   // text ON sea-blue in dark
+const kOnSeaBlue   = Color(0xFFFFFFFF);  // White contrasts best on Deep Purple
 
 // LIGHT
 const kLightBg      = Color(0xFFF4F6F9);
 const kLightSurface = Colors.white;
 const kLightCard    = Colors.white;
-const kLightText    = Color(0xFF0D1520);
+const kLightText    = Color(0xFF000000); // Guaranteed Black on Light
 const kLightSubText = Color(0xFF546E7A);
-const kOnSeaBlueLight = Colors.white; // text ON sea-blue in light
+const kOnSeaBlueLight = Color(0xFFFFFFFF); // White contrasts best on Deep Purple
 
 // ─── THEME BUILDER ────────────────────────────────────────────────────────────
 ThemeData buildTheme({required bool dark}) {
@@ -39,7 +39,7 @@ ThemeData buildTheme({required bool dark}) {
       onSecondary: dark ? kOnSeaBlue : kOnSeaBlueLight,
       surface: surface,
       onSurface: text,
-      error: Colors.red,
+      error: const Color(0xFFE53935), // Accessible Red
       onError: Colors.white,
     ),
     cardColor: card,
