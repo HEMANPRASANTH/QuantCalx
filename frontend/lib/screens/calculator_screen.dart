@@ -364,60 +364,41 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
                   ]),
                   const SizedBox(height: 10),
 
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: card, borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFFF7043).withValues(alpha: 0.28)),
-                    ),
-                    child: Row(children: [
-                      Icon(Icons.shield_outlined, color: const Color(0xFFFF7043).withValues(alpha: 0.8), size: 22),
-                      const SizedBox(width: 12),
-                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('MAX RISK AMOUNT', style: TextStyle(color: sub, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                        const SizedBox(height: 4),
-                        Text('\$${_r!.riskUsd.toStringAsFixed(2)}  (${_r!.lossPct.toStringAsFixed(2)}% of balance)',
-                          style: const TextStyle(color: Color(0xFFFF7043), fontSize: 17, fontWeight: FontWeight.w900)),
+                  GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: _r!.riskUsd.toStringAsFixed(2)));
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: const Text('Risk Amount copied!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        backgroundColor: Colors.green,
+                        behavior: SnackBarBehavior.floating,
+                        duration: const Duration(seconds: 1),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ));
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: card, borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFFF7043).withValues(alpha: 0.28)),
+                      ),
+                      child: Row(children: [
+                        Icon(Icons.shield_outlined, color: const Color(0xFFFF7043).withValues(alpha: 0.8), size: 22),
+                        const SizedBox(width: 12),
+                        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('MAX RISK AMOUNT', style: TextStyle(color: sub, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                          const SizedBox(height: 4),
+                          Text('\$${_r!.riskUsd.toStringAsFixed(2)}  (${_r!.lossPct.toStringAsFixed(2)}% of balance)',
+                            style: const TextStyle(color: Color(0xFFFF7043), fontSize: 17, fontWeight: FontWeight.w900)),
+                        ]),
                       ]),
-                    ]),
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  _GlowBtn(label: '📋 COPY ALL', color: p.accent.withValues(alpha: 0.8), onTap: _copyAll),
                 ])),
             ]),
           ),
         ),
       ])),
     );
-  }
-
-  void _copyAll() {
-    if (_r == null) return;
-    final pair = widget.pair.symbol;
-    final dir = _isBuy ? 'BUY' : 'SELL';
-    final txt = '''
-QUANTCALX TRADE SETUP
-
-Pair: $pair
-Direction: $dir
-Entry: ${_fX(double.tryParse(_ent.text) ?? 0)}
-Stop Loss: ${_fX(_r!.sl)} (${_f2(_r!.slPips)} pips)
-Target: ${_fX(_r!.tp)} (${_f2(_r!.tpPips)} pips)
-
-Risk: \$${_r!.riskUsd.toStringAsFixed(2)} (${double.tryParse(_risk.text)?.toStringAsFixed(2)}%)
-Reward (R:R): 1:${_r!.rr.toStringAsFixed(2)}
-Lot Size: ${_r!.lots.toStringAsFixed(4)}
-
-Potential Profit: +\$${_r!.profitUsd.toStringAsFixed(2)}
-Potential Loss: -\$${_r!.lossUsd.toStringAsFixed(2)}
-''';
-    Clipboard.setData(ClipboardData(text: txt));
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Text('Copied to clipboard!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-      backgroundColor: Colors.green,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ));
   }
 
   Widget _sec(String t, Color c) => Text(t,
@@ -482,34 +463,60 @@ Potential Loss: -\$${_r!.lossUsd.toStringAsFixed(2)}
     );
 
   Widget _card(String title, String val, Color color, String sub, Color card, bool isDark) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.22))),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: TextStyle(color: isDark ? kDarkSubText : kLightSubText, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
-        const SizedBox(height: 7),
-        FittedBox(alignment: Alignment.centerLeft, fit: BoxFit.scaleDown,
-          child: Text(val, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w900, fontFamily: 'monospace'))),
-        const SizedBox(height: 4),
-        Text(sub, style: TextStyle(color: color.withValues(alpha: 0.55), fontSize: 10, fontWeight: FontWeight.bold)),
-      ]),
+    child: GestureDetector(
+      onTap: () {
+        final copyVal = val.replaceAll(RegExp(r'[^\d.\-]'), '');
+        Clipboard.setData(ClipboardData(text: copyVal));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('$title copied ($copyVal)!', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 1),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ));
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.22))),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, style: TextStyle(color: isDark ? kDarkSubText : kLightSubText, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+          const SizedBox(height: 7),
+          FittedBox(alignment: Alignment.centerLeft, fit: BoxFit.scaleDown,
+            child: Text(val, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w900, fontFamily: 'monospace'))),
+          const SizedBox(height: 4),
+          Text(sub, style: TextStyle(color: color.withValues(alpha: 0.55), fontSize: 10, fontWeight: FontWeight.bold)),
+        ]),
+      ),
     ),
   );
 
   Widget _plCard(String title, String val, String sub, Color color, Color card) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.3))),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: TextStyle(color: color.withValues(alpha: 0.75), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
-        const SizedBox(height: 7),
-        FittedBox(alignment: Alignment.centerLeft, fit: BoxFit.scaleDown,
-          child: Text(val, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w900, fontFamily: 'monospace'))),
-        const SizedBox(height: 4),
-        Text(sub, style: TextStyle(color: color.withValues(alpha: 0.6), fontSize: 10, fontWeight: FontWeight.bold)),
-      ]),
+    child: GestureDetector(
+      onTap: () {
+        final copyVal = val.replaceAll(RegExp(r'[^\d.\-]'), '');
+        Clipboard.setData(ClipboardData(text: copyVal));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('$title copied ($copyVal)!', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 1),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ));
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.3))),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, style: TextStyle(color: color.withValues(alpha: 0.75), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+          const SizedBox(height: 7),
+          FittedBox(alignment: Alignment.centerLeft, fit: BoxFit.scaleDown,
+            child: Text(val, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w900, fontFamily: 'monospace'))),
+          const SizedBox(height: 4),
+          Text(sub, style: TextStyle(color: color.withValues(alpha: 0.6), fontSize: 10, fontWeight: FontWeight.bold)),
+        ]),
+      ),
     ),
   );
 
