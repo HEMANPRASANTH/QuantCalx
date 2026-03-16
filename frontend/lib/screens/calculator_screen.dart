@@ -83,7 +83,8 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
   final _sl   = TextEditingController();
   final _tp   = TextEditingController();
   final _lots = TextEditingController();
-  final _pips = TextEditingController();
+  final _pips = TextEditingController(); // SL Pips
+  final _tPips = TextEditingController(); // TP Pips
 
   bool _isBuy = true;
   _Result? _r;
@@ -98,7 +99,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
   }
   @override void dispose() {
     _ac.dispose();
-    for (final c in [_bal, _ent, _risk, _rr, _sl, _tp, _lots, _pips]) c.dispose();
+    for (final c in [_bal, _ent, _risk, _rr, _sl, _tp, _lots, _pips, _tPips]) c.dispose();
     super.dispose();
   }
 
@@ -113,6 +114,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
     double? sl = double.tryParse(_sl.text);
     double? tp = double.tryParse(_tp.text);
     double? slPips = double.tryParse(_pips.text);
+    double? tpPips = double.tryParse(_tPips.text);
     double? lots = double.tryParse(_lots.text);
 
     if (b == null || b <= 0)  { setState(() => _err = 'Enter valid balance'); return; }
@@ -135,6 +137,13 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
       final slDist = slPips * p.pipSize;
       sl = _isBuy ? e - slDist : e + slDist;
       _sl.text = _fX(sl);
+    }
+
+    // Auto-calculate TP price from TP Pips if TP price is missing
+    if ((tp == null || tp <= 0) && tpPips != null && tpPips > 0) {
+      final tpDist = tpPips * p.pipSize;
+      tp = _isBuy ? e + tpDist : e - tpDist;
+      _tp.text = _fX(tp);
     }
 
     // Auto-calculate Risk % from manual Lots and SL (or SL Pips)
@@ -196,6 +205,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
       _sl.text = _fX(_r!.sl);
       _lots.text = _r!.lots.toStringAsFixed(2);
       _pips.text = _f2(_r!.slPips);
+      _tPips.text = _f2(_r!.tpPips);
     }
 
     _ac.forward(from: 0);
@@ -310,13 +320,16 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
                 const SizedBox(width: 12),
                 Expanded(child: _inpCol('STOP LOSS', _sl, '', isDark, text, p.accent)),
               ]),
-              _sec('MANUAL OVERRIDES (OPTIONAL)', sub),
               const SizedBox(height: 8),
               Row(children: [
-                Expanded(child: _inpCol('LOT SIZE', _lots, 'Auto calculation', isDark, text, p.accent)),
+                Expanded(child: _inpCol('TP PIPS', _tPips, 'Auto', isDark, text, p.accent)),
                 const SizedBox(width: 12),
-                Expanded(child: _inpCol('SL PIPS', _pips, 'Auto sl dist', isDark, text, p.accent)),
+                Expanded(child: _inpCol('SL PIPS', _pips, 'Auto', isDark, text, p.accent)),
               ]),
+              const SizedBox(height: 20),
+              _sec('MANUAL OVERRIDES', sub),
+              const SizedBox(height: 8),
+              _inpRow('LOT SIZE', _lots, 'Auto calculate', isDark, text, p.accent),
               const SizedBox(height: 24),
 
               if (_err != null) ...[
