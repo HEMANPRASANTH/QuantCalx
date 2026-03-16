@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../providers/theme_provider.dart';
@@ -81,6 +82,8 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
   final _rr   = TextEditingController(text: '5.0');
   final _sl   = TextEditingController();
   final _tp   = TextEditingController();
+  final _lots = TextEditingController();
+  final _pips = TextEditingController();
 
   bool _isBuy = true;
   _Result? _r;
@@ -95,7 +98,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
   }
   @override void dispose() {
     _ac.dispose();
-    for (final c in [_bal, _ent, _risk, _rr, _sl]) c.dispose();
+    for (final c in [_bal, _ent, _risk, _rr, _sl, _tp, _lots, _pips]) c.dispose();
     super.dispose();
   }
 
@@ -109,6 +112,8 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
     double? rr = double.tryParse(_rr.text);
     double? sl = double.tryParse(_sl.text);
     double? tp = double.tryParse(_tp.text);
+    double? slPips = double.tryParse(_pips.text);
+    double? lots = double.tryParse(_lots.text);
 
     if (b == null || b <= 0)  { setState(() => _err = 'Enter valid balance'); return; }
 
@@ -118,14 +123,28 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
     // 1. Missing Entry: We need Target, SL, and RR to figure it out
     if (e == null || e <= 0) {
       if (sl != null && tp != null && rr != null && rr > 0) {
-         // Entry is between SL and TP, driven by RR ratio
-         // Distance TP -> Entry = RR * Distance Entry -> SL
-         // TP - E = RR * (E - SL)   (if Buy)
-         // E = (TP + RR*SL) / (1 + RR)
          e = (tp + (rr * sl)) / (1 + rr);
          _ent.text = _fX(e);
       } else {
          setState(() => _err = 'Enter Entry Price (or provide SL, TP, & RR to auto-calculate)'); return;
+      }
+    }
+
+    // Auto-calculate SL price from SL Pips if SL price is missing
+    if ((sl == null || sl <= 0) && slPips != null && slPips > 0) {
+      final slDist = slPips * p.pipSize;
+      sl = _isBuy ? e - slDist : e + slDist;
+      _sl.text = _fX(sl);
+    }
+
+    // Auto-calculate Risk % from manual Lots and SL (or SL Pips)
+    if ((r == null || r <= 0) && lots != null && lots > 0) {
+      if (sl != null && sl > 0) {
+        final dist = (e - sl).abs();
+        final actualPips = dist / p.pipSize;
+        final riskUsd = lots * actualPips * p.pipValPerLot;
+        r = (riskUsd / b) * 100;
+        _risk.text = r.toStringAsFixed(2);
       }
     }
 
@@ -171,13 +190,12 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
     setState(() => _r = _calc(pair: widget.pair.symbol, balance: b, entry: e!, riskPct: r!, rrRatio: rr!,
       isBuy: _isBuy, slP: sl));
     
-    // Auto fill TP visual if not set
-    if (tp == null || tp <= 0) {
+    // Auto fill visuals
+    if (_r != null) {
       _tp.text = _fX(_r!.tp);
-    }
-    // Auto fill SL visual if not set
-    if (sl == null || sl <= 0) {
       _sl.text = _fX(_r!.sl);
+      _lots.text = _r!.lots.toStringAsFixed(2);
+      _pips.text = _f2(_r!.slPips);
     }
 
     _ac.forward(from: 0);
@@ -292,6 +310,13 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
                 const SizedBox(width: 12),
                 Expanded(child: _inpCol('STOP LOSS', _sl, '', isDark, text, p.accent)),
               ]),
+              _sec('MANUAL OVERRIDES (OPTIONAL)', sub),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: _inpCol('LOT SIZE', _lots, 'Auto calculation', isDark, text, p.accent)),
+                const SizedBox(width: 12),
+                Expanded(child: _inpCol('SL PIPS', _pips, 'Auto sl dist', isDark, text, p.accent)),
+              ]),
               const SizedBox(height: 24),
 
               if (_err != null) ...[
@@ -356,12 +381,43 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
                       ]),
                     ]),
                   ),
+                  const SizedBox(height: 16),
+                  _GlowBtn(label: '📋 COPY ALL', color: p.accent.withValues(alpha: 0.8), onTap: _copyAll),
                 ])),
             ]),
           ),
         ),
       ])),
     );
+  }
+
+  void _copyAll() {
+    if (_r == null) return;
+    final pair = widget.pair.symbol;
+    final dir = _isBuy ? 'BUY' : 'SELL';
+    final txt = '''
+QUANTCALX TRADE SETUP
+
+Pair: $pair
+Direction: $dir
+Entry: ${_fX(double.tryParse(_ent.text) ?? 0)}
+Stop Loss: ${_fX(_r!.sl)} (${_f2(_r!.slPips)} pips)
+Target: ${_fX(_r!.tp)} (${_f2(_r!.tpPips)} pips)
+
+Risk: \$${_r!.riskUsd.toStringAsFixed(2)} (${double.tryParse(_risk.text)?.toStringAsFixed(2)}%)
+Reward (R:R): 1:${_r!.rr.toStringAsFixed(2)}
+Lot Size: ${_r!.lots.toStringAsFixed(4)}
+
+Potential Profit: +\$${_r!.profitUsd.toStringAsFixed(2)}
+Potential Loss: -\$${_r!.lossUsd.toStringAsFixed(2)}
+''';
+    Clipboard.setData(ClipboardData(text: txt));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: const Text('Copied to clipboard!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      backgroundColor: Colors.green,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    ));
   }
 
   Widget _sec(String t, Color c) => Text(t,
