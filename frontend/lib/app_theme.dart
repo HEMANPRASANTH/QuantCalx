@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 // ─── COLOURS ──────────────────────────────────────────────────────────────────
 // Sea blue accent used in both modes
-const kSeaBlue = Color(0xFF0097A7);  // Cyan-700 / sea blue
+const kSeaBlue = Color(0xFF7C4DFF);  // Deep Purple / Vibrant Violet
 
 // DARK (AMOLED)
 const kDarkBg      = Color(0xFF000000); // True AMOLED black

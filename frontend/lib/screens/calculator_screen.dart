@@ -26,42 +26,50 @@ String _speed(String pair) {
   if (pair == 'USDJPY') return '⚡ FAST — JPY 80–150 pips/day (high pip \$)';
   if (pair == 'GBPUSD') return '🔥 MODERATE-FAST — GBP 80–120 pips/day';
   if (pair == 'EURUSD') return '🟡 MODERATE — EUR 60–100 pips/day';
-  if (pair == 'AUDUSD' || pair == 'NZDUSD') return '🟢 SLOW — AUD/NZD 40–70 pips/day, need patience';
+  if (pair == 'AUDUSD' || pair == 'NZDUSD') return '🟢 SLOW — AUD/NZD 40–70 pips/day';
   return '🟡 MODERATE — Check ATR for this pair';
 }
 
 class _Result {
   final double sl, tp, slPips, tpPips, rr;
   final double riskUsd, lots, units, pipVal;
-  final double notional, lev;
+  final double notional;
   final double profitUsd, profitPct, lossUsd, lossPct;
   const _Result({
     required this.sl, required this.tp, required this.slPips, required this.tpPips, required this.rr,
     required this.riskUsd, required this.lots, required this.units, required this.pipVal,
-    required this.notional, required this.lev,
+    required this.notional,
     required this.profitUsd, required this.profitPct, required this.lossUsd, required this.lossPct,
   });
 }
 
 _Result? _calc({required String pair, required double balance, required double entry,
-  required double riskPct, required double rrRatio, double? slP, double? tpP}) {
+  required double riskPct, required double rrRatio, required bool isBuy, double? slP}) {
   if (balance <= 0 || entry <= 0 || riskPct <= 0 || rrRatio <= 0) return null;
   final p = _getProfile(pair, entry);
   final riskUsd = balance * (riskPct / 100);
+  
   double sl, tp;
-  if (slP != null && slP > 0) { sl = slP; tp = entry + (entry - sl).abs() * rrRatio; }
-  else if (tpP != null && tpP > 0) { tp = tpP; sl = entry - (tp - entry).abs() / rrRatio; }
-  else { final buf = entry * 0.005; sl = entry - buf; tp = entry + buf * rrRatio; }
-  final slPips = (entry - sl).abs() / p.pipSize;
+  if (slP != null && slP > 0) { 
+    sl = slP; 
+  } else { 
+    final buf = entry * 0.005; 
+    sl = isBuy ? entry - buf : entry + buf; 
+  }
+  
+  final slDist = (entry - sl).abs();
+  tp = isBuy ? entry + (slDist * rrRatio) : entry - (slDist * rrRatio);
+
+  final slPips = slDist / p.pipSize;
   final tpPips = (tp - entry).abs() / p.pipSize;
   final lots = riskUsd / (slPips * p.pipValPerLot);
   final units = lots * p.contractSize;
   final notional = units * entry;
   final profitUsd = tpPips * p.pipValPerLot * lots;
   final lossUsd   = slPips * p.pipValPerLot * lots;
-  return _Result(sl: sl, tp: tp, slPips: slPips, tpPips: tpPips, rr: tpPips / slPips,
+  return _Result(sl: sl, tp: tp, slPips: slPips, tpPips: tpPips, rr: rrRatio,
     riskUsd: riskUsd, lots: lots, units: units, pipVal: p.pipValPerLot,
-    notional: notional, lev: notional > 0 ? notional / balance : 0,
+    notional: notional,
     profitUsd: profitUsd, profitPct: (profitUsd / balance) * 100,
     lossUsd: lossUsd,    lossPct:  (lossUsd / balance) * 100);
 }
@@ -81,7 +89,8 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
   final _risk = TextEditingController(text: '1.0');
   final _rr   = TextEditingController(text: '5.0');
   final _sl   = TextEditingController();
-  final _tp   = TextEditingController();
+
+  bool _isBuy = true;
   _Result? _r;
   String?  _err;
   late AnimationController _ac;
@@ -94,7 +103,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
   }
   @override void dispose() {
     _ac.dispose();
-    for (final c in [_bal, _ent, _risk, _rr, _sl, _tp]) c.dispose();
+    for (final c in [_bal, _ent, _risk, _rr, _sl]) c.dispose();
     super.dispose();
   }
 
@@ -106,13 +115,12 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
     final r = double.tryParse(_risk.text);
     final rr = double.tryParse(_rr.text);
     final sl = double.tryParse(_sl.text);
-    final tp = double.tryParse(_tp.text);
     if (b == null || b <= 0)  { setState(() => _err = 'Enter valid balance'); return; }
     if (e == null || e <= 0)  { setState(() => _err = 'Enter valid entry price'); return; }
     if (r == null || r <= 0)  { setState(() => _err = 'Enter valid risk % (e.g. 1.0)'); return; }
     if (rr == null || rr <= 0){ setState(() => _err = 'Enter valid R:R (e.g. 5.0)'); return; }
     setState(() => _r = _calc(pair: widget.pair.symbol, balance: b, entry: e, riskPct: r, rrRatio: rr,
-      slP: (sl != null && sl > 0) ? sl : null, tpP: (tp != null && tp > 0) ? tp : null));
+      isBuy: _isBuy, slP: (sl != null && sl > 0) ? sl : null));
     _ac.forward(from: 0);
   }
 
@@ -171,6 +179,43 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
               _sec('TRADE PARAMETERS', sub),
               const SizedBox(height: 8),
               Row(children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _isBuy = true),
+                    child: Container(
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: _isBuy ? Colors.green.withValues(alpha: 0.15) : card,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: _isBuy ? Colors.green : Colors.white10),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text('BUY (LONG)', style: TextStyle(color: _isBuy ? Colors.greenAccent : sub, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _isBuy = false),
+                    child: Container(
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: !_isBuy ? Colors.red.withValues(alpha: 0.15) : card,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: !_isBuy ? Colors.red : Colors.white10),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text('SELL (SHORT)', style: TextStyle(color: !_isBuy ? Colors.redAccent : sub, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                    ),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 16),
+
+              _sec('TRADE PARAMETERS', sub),
+              const SizedBox(height: 8),
+              Row(children: [
                 Expanded(child: _inp('BALANCE (\$)', _bal, '10000', isDark, text, p.accent)),
                 const SizedBox(width: 10),
                 Expanded(child: _inp('ENTRY PRICE', _ent, 'e.g. 1.0850', isDark, text, p.accent)),
@@ -178,15 +223,15 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
               Row(children: [
                 Expanded(child: _inp('RISK %', _risk, '1.0', isDark, text, p.accent)),
                 const SizedBox(width: 10),
-                Expanded(child: _inp('REWARD RATIO (1:X)', _rr, '5.0', isDark, text, p.accent)),
+                Expanded(child: _inp('MANDATORY R:R (1:X)', _rr, '5.0', isDark, text, p.accent)),
               ]),
               const SizedBox(height: 4),
-              _sec('OPTIONAL — Provide SL or TP (other auto-calculates via RR)', sub),
+              _sec('OPTIONAL (Target calculcated directly via R:R)', sub),
               const SizedBox(height: 8),
               Row(children: [
-                Expanded(child: _inp('STOP LOSS', _sl, 'Optional', isDark, text, p.accent)),
+                Expanded(child: _inp('STOP LOSS EXCEPTION', _sl, 'Optional', isDark, text, p.accent)),
                 const SizedBox(width: 10),
-                Expanded(child: _inp('TARGET PRICE', _tp, 'Optional', isDark, text, p.accent)),
+                Expanded(child: const SizedBox()),
               ]),
 
               if (_err != null) ...[
@@ -213,12 +258,6 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
                     _card('STOP LOSS', '\$${_f(_r!.sl)}', Colors.redAccent, '${_f2(_r!.slPips)} pips', card, isDark),
                     const SizedBox(width: 10),
                     _card('TAKE PROFIT', '\$${_f(_r!.tp)}', const Color(0xFF00C853), '${_f2(_r!.tpPips)} pips', card, isDark),
-                  ]),
-                  const SizedBox(height: 10),
-                  Row(children: [
-                    _card('ACTUAL R:R', '1 : ${_r!.rr.toStringAsFixed(2)}', const Color(0xFFFFC107), 'Reward Ratio', card, isDark),
-                    const SizedBox(width: 10),
-                    _card('LEVERAGE', '${_r!.lev.toStringAsFixed(1)}x', const Color(0xFFFF7043), '\$${_fL(_r!.notional)} notional', card, isDark),
                   ]),
                   const SizedBox(height: 10),
                   Row(children: [

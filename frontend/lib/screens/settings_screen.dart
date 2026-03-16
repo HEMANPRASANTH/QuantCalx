@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_theme.dart';
@@ -21,19 +22,34 @@ class SettingsScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark 
+                ? [const Color(0xFF0A0E14), const Color(0xFF001F29)]
+                : [const Color(0xFFF4F6F9), const Color(0xFFE2EFF5)],
+          ),
+        ),
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
           // ─── APPEARANCE ─────────────────────────────────────────────
           _sectionLabel('APPEARANCE', subColor),
           const SizedBox(height: 10),
 
-          Container(
-            decoration: BoxDecoration(
-              color: cardColor, borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: kSeaBlue.withValues(alpha: 0.15)),
-            ),
-            child: Column(children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: cardColor.withValues(alpha: isDark ? 0.35 : 0.6),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: kSeaBlue.withValues(alpha: 0.15)),
+                ),
+                child: Column(children: [
               // Dark mode toggle
               _settingsTile(
                 icon: isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
@@ -50,46 +66,12 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
 
-                            Divider(color: isDark ? Colors.white10 : Colors.black12, height: 1, indent: 56),
-
-              // Mode preview chip row
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: Row(children: [
-                  _modeChip('DARK', isDark, () { if (!isDark) tp.toggle(); }),
-                  const SizedBox(width: 10),
-                  _modeChip('LIGHT', !isDark, () { if (isDark) tp.toggle(); }),
-                ]),
+                    ]),
               ),
-            ]),
-          ),
-
-          const SizedBox(height: 28),
-
-          // ─── ABOUT ──────────────────────────────────────────────────
-          _sectionLabel('ABOUT', subColor),
-          const SizedBox(height: 10),
-
-          Container(
-            decoration: BoxDecoration(
-              color: cardColor, borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: kSeaBlue.withValues(alpha: 0.15)),
             ),
-            child: Column(children: [
-              _settingsTile(icon: Icons.info_outline_rounded, iconColor: kSeaBlue,
-                title: 'Version', subtitle: '1.0.0 — Build 1', textColor: textColor, subColor: subColor,
-                trailing: const SizedBox.shrink()),
-                            Divider(color: isDark ? Colors.white10 : Colors.black12, height: 1, indent: 56),
-              _settingsTile(icon: Icons.calculate_outlined, iconColor: kSeaBlue,
-                title: 'Calculator Mode', subtitle: 'Fully Offline — No Internet Needed',
-                textColor: textColor, subColor: subColor, trailing: const SizedBox.shrink()),
-                            Divider(color: isDark ? Colors.white10 : Colors.black12, height: 1, indent: 56),
-              _settingsTile(icon: Icons.verified_user_outlined, iconColor: kSeaBlue,
-                title: 'Data Privacy', subtitle: 'All data stored locally — Zero external servers',
-                textColor: textColor, subColor: subColor, trailing: const SizedBox.shrink()),
-            ]),
           ),
         ],
+      ),
       ),
     );
   }
@@ -112,21 +94,4 @@ class SettingsScreen extends StatelessWidget {
       trailing: trailing,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
-
-  Widget _modeChip(String label, bool selected, VoidCallback onTap) => GestureDetector(
-    onTap: onTap,
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-      decoration: BoxDecoration(
-        color: selected ? kSeaBlue : Colors.transparent,
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: selected ? kSeaBlue : Colors.grey.withValues(alpha: 0.3)),
-      ),
-      child: Text(label, style: TextStyle(
-        color: selected ? Colors.white : Colors.grey,
-        fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1,
-      )),
-    ),
-  );
 }

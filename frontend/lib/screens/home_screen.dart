@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -23,7 +24,8 @@ const _pairs = [
   PairInfo('USDCAD', 'USD/CAD', 'FOREX',  Color(0xFFFF7043)),
   PairInfo('USDCHF', 'USD/CHF', 'FOREX',  Color(0xFFEC407A)),
   PairInfo('USDJPY', 'USD/JPY', 'FOREX',  Color(0xFFFF9800)),
-  PairInfo('XAUUSD', 'XAU/USD', 'METAL',  Color(0xFFFFD700)),
+  PairInfo('XAGUSD', 'XAG/USD', 'COMMODITY',  Color(0xFFB0BEC5)),
+  PairInfo('XAUUSD', 'XAU/USD', 'COMMODITY',  Color(0xFFFFD700)),
   PairInfo('BTCUSD', 'BTC/USD', 'CRYPTO', Color(0xFFF7931A)),
   PairInfo('ETHUSD', 'ETH/USD', 'CRYPTO', Color(0xFF627EEA)),
 ];
@@ -31,19 +33,60 @@ const _pairs = [
 // =============================================================================
 // HOME SCREEN — pair grid with swipe drawer
 // =============================================================================
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  bool _isGridView = true;
+  String _sortOption = 'Default';
+
+  List<PairInfo> get _sortedPairs {
+    final list = List<PairInfo>.from(_pairs);
+    switch (_sortOption) {
+      case 'A-Z': list.sort((a, b) => a.symbol.compareTo(b.symbol)); break;
+      case 'Z-A': list.sort((a, b) => b.symbol.compareTo(a.symbol)); break;
+      case 'Forex First': list.sort((a, b) {
+        if (a.category == b.category) return a.symbol.compareTo(b.symbol);
+        if (a.category == 'FOREX') return -1;
+        if (b.category == 'FOREX') return 1;
+        return a.category.compareTo(b.category);
+      }); break;
+      case 'Commodity First': list.sort((a, b) {
+        if (a.category == b.category) return a.symbol.compareTo(b.symbol);
+        if (a.category == 'COMMODITY') return -1;
+        if (b.category == 'COMMODITY') return 1;
+        return a.category.compareTo(b.category);
+      }); break;
+      case 'Crypto First': list.sort((a, b) {
+        if (a.category == b.category) return a.symbol.compareTo(b.symbol);
+        if (a.category == 'CRYPTO') return -1;
+        if (b.category == 'CRYPTO') return 1;
+        return a.category.compareTo(b.category);
+      }); break;
+    }
+    return list;
+  }
 
   @override Widget build(BuildContext context) {
     final isDark = context.watch<ThemeProvider>().isDark;
     final textCol = isDark ? kDarkText    : kLightText;
 
-    final bg     = isDark ? kDarkBg : kLightBg;
-
     return Scaffold(
-      backgroundColor: bg,
       drawer: _AppDrawer(),
-      body: SafeArea(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark 
+                ? [const Color(0xFF0A0E14), const Color(0xFF001F29)]
+                : [const Color(0xFFF4F6F9), const Color(0xFFE2EFF5)],
+          ),
+        ),
+        child: SafeArea(
         child: Builder(builder: (ctx) => Column(children: [
 
           // ─── HEADER ─────────────────────────────────────────────────
@@ -51,76 +94,103 @@ class HomeScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(8, 14, 16, 0),
             child: Row(children: [
               IconButton(
-                icon: Icon(Icons.menu_rounded, color: textCol, size: 26),
+                icon: Icon(Icons.notes_rounded, color: textCol, size: 26),
                 onPressed: () => Scaffold.of(ctx).openDrawer(),
               ),
               const Spacer(),
-              Row(children: [
-                const Icon(Icons.candlestick_chart_rounded, color: kSeaBlue, size: 22),
-                const SizedBox(width: 8),
-                Text('QUANTCALX', style: TextStyle(
-                  color: textCol, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 2.5,
-                )),
-              ]),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text('QUANTCALX', style: TextStyle(
+                    color: textCol, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 2.5,
+                  )),
+                  const SizedBox(height: 4),
+                  Text('Be Professional', style: TextStyle(
+                    color: isDark ? kDarkSubText : kLightSubText, fontSize: 12, letterSpacing: 1.5, fontWeight: FontWeight.w600,
+                  )),
+                ],
+              ),
               const Spacer(),
-              GestureDetector(
-                onTap: () => Navigator.push(context, _slide(const SettingsScreen())),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: kSeaBlue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+              // ─── Toggles & Sorting Options ─────────────────────────────
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      setState(() { _isGridView = !_isGridView; });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: kSeaBlue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(_isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded, color: kSeaBlue, size: 20),
+                    ),
                   ),
-                  child: const Icon(Icons.settings_outlined, color: kSeaBlue, size: 20),
-                ),
+                  const SizedBox(width: 8),
+                  
+                  Container(
+                    decoration: BoxDecoration(
+                      color: kSeaBlue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: PopupMenuButton<String>(
+                      icon: const Icon(Icons.sort_rounded, color: kSeaBlue, size: 20),
+                      position: PopupMenuPosition.under,
+                      color: isDark ? kDarkCard : kLightCard,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      onSelected: (val) => setState(() { _sortOption = val; }),
+                      itemBuilder: (ctx) => [
+                        'Default', 'A-Z', 'Z-A', 'Forex First', 'Commodity First', 'Crypto First'
+                      ].map((e) => PopupMenuItem(
+                        value: e,
+                        child: Text(e, style: TextStyle(
+                          fontSize: 13, 
+                          fontWeight: _sortOption == e ? FontWeight.w900 : FontWeight.w600,
+                          color: _sortOption == e ? kSeaBlue : textCol,
+                        )),
+                      )).toList(),
+                    ),
+                  ),
+                ],
               ),
             ]),
           ),
           const SizedBox(height: 6),
 
-          // Sub-header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Professional Risk Calculator',
-                style: TextStyle(color: isDark ? kDarkSubText : kLightSubText, fontSize: 12)),
-            ),
-          ),
-          const SizedBox(height: 18),
-
-          // ─── SECTION LABEL ──────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text('SELECT INSTRUMENT', style: TextStyle(
-                color: isDark ? kDarkSubText : kLightSubText,
-                fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 2,
-              )),
-            ),
-          ),
           const SizedBox(height: 12),
 
           // ─── PAIR GRID ──────────────────────────────────────────────
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: GridView.builder(
-                physics: const BouncingScrollPhysics(),
-                itemCount: _pairs.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 2.3,
-                ),
-                itemBuilder: (ctx, i) => _PairCard(pair: _pairs[i], isDark: isDark),
-              ),
+              child: _isGridView 
+                ? GridView.builder(
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: _sortedPairs.length,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 2.3,
+                    ),
+                    itemBuilder: (ctx, i) => _PairCard(pair: _sortedPairs[i], isDark: isDark),
+                  )
+                : ListView.builder(
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: _sortedPairs.length,
+                    itemBuilder: (ctx, i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _ListCard(pair: _sortedPairs[i], isDark: isDark),
+                    ),
+                  ),
             ),
           ),
           const SizedBox(height: 10),
         ])),
+      ),
       ),
     );
   }
@@ -185,21 +255,24 @@ class _PairCardState extends State<_PairCard> with SingleTickerProviderStateMixi
       onTapCancel: () => _ac.reverse(),
       child: ScaleTransition(
         scale: _scale,
-        child: Container(
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: p.accent.withValues(alpha: 0.25)),
-            boxShadow: [BoxShadow(color: p.accent.withValues(alpha: 0.06), blurRadius: 14, spreadRadius: 2)],
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              decoration: BoxDecoration(
+                color: cardColor.withValues(alpha: widget.isDark ? 0.35 : 0.6),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: p.accent.withValues(alpha: 0.4)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(children: [
             Container(
               width: 40, height: 40,
               decoration: BoxDecoration(color: p.accent.withValues(alpha: 0.15), shape: BoxShape.circle),
               alignment: Alignment.center,
               child: Text(
-                p.category == 'CRYPTO' ? '₿' : p.category == 'METAL' ? '⚡' : '💱',
+                p.category == 'CRYPTO' ? '₿' : p.category == 'COMMODITY' ? '⚡' : '💱',
                 style: const TextStyle(fontSize: 18),
               ),
             ),
@@ -210,6 +283,93 @@ class _PairCardState extends State<_PairCard> with SingleTickerProviderStateMixi
               Text(p.category, style: TextStyle(color: widget.isDark ? kDarkSubText : kLightSubText, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
             ]),
           ]),
+        ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// LIST CARD (for List View)
+// =============================================================================
+class _ListCard extends StatefulWidget {
+  final PairInfo pair;
+  final bool isDark;
+  const _ListCard({required this.pair, required this.isDark});
+  @override State<_ListCard> createState() => _ListCardState();
+}
+
+class _ListCardState extends State<_ListCard> with SingleTickerProviderStateMixin {
+  late final AnimationController _ac;
+  late final Animation<double> _scale;
+  @override void initState() {
+    super.initState();
+    _ac = AnimationController(vsync: this, duration: const Duration(milliseconds: 110));
+    _scale = Tween(begin: 1.0, end: 0.96).animate(CurvedAnimation(parent: _ac, curve: Curves.easeOut));
+  }
+  @override void dispose() { _ac.dispose(); super.dispose(); }
+
+  @override Widget build(BuildContext context) {
+    final p = widget.pair;
+    final cardColor = widget.isDark ? kDarkCard : kLightCard;
+
+    return GestureDetector(
+      onTapDown: (_) => _ac.forward(),
+      onTapUp: (_) async {
+        await _ac.reverse();
+        if (context.mounted) {
+          Navigator.push(context, PageRouteBuilder(
+            pageBuilder: (_, a, __) => CalculatorScreen(pair: p),
+            transitionsBuilder: (_, a, __, child) => FadeTransition(
+              opacity: a,
+              child: SlideTransition(
+                position: Tween(begin: const Offset(0, 0.08), end: Offset.zero)
+                  .animate(CurvedAnimation(parent: a, curve: Curves.easeOut)),
+                child: child,
+              ),
+            ),
+            transitionDuration: const Duration(milliseconds: 300),
+          ));
+        }
+      },
+      onTapCancel: () => _ac.reverse(),
+      child: ScaleTransition(
+        scale: _scale,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              decoration: BoxDecoration(
+                color: cardColor.withValues(alpha: widget.isDark ? 0.35 : 0.6),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: p.accent.withValues(alpha: 0.4)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Row(children: [
+                Container(
+                  width: 48, height: 48,
+                  decoration: BoxDecoration(color: p.accent.withValues(alpha: 0.15), shape: BoxShape.circle),
+                  alignment: Alignment.center,
+                  child: Text(
+                    p.category == 'CRYPTO' ? '₿' : p.category == 'COMMODITY' ? '⚡' : '💱',
+                    style: const TextStyle(fontSize: 22),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Text(p.label, style: TextStyle(color: p.accent, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                    const SizedBox(height: 4),
+                    Text(p.category, style: TextStyle(color: widget.isDark ? kDarkSubText : kLightSubText, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                  ]),
+                ),
+                Icon(Icons.arrow_forward_ios_rounded, color: p.accent.withValues(alpha: 0.5), size: 16),
+              ]),
+            ),
+          ),
         ),
       ),
     );
@@ -230,15 +390,21 @@ class _AppDrawer extends StatelessWidget {
     final sub     = isDarkNow ? kDarkSubText : kLightSubText;
 
     return Drawer(
-      backgroundColor: surface,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
       width: MediaQuery.of(context).size.width * 0.8,
-      child: SafeArea(
+      child: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Container(
+            color: surface.withValues(alpha: isDarkNow ? 0.35 : 0.6),
+            child: SafeArea(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
           // ─ Profile Header ─────────────────────────────────────────
           Container(
             width: double.infinity,
-            color: isDarkNow ? kDarkBg : Colors.white,
+            color: Colors.transparent,
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
@@ -293,21 +459,16 @@ class _AppDrawer extends StatelessWidget {
           const SizedBox(height: 8),
 
           // ─── Menu Items ────────────────────────────────────────────
-          _drawerItem(Icons.calculate_outlined,  'Calculator',    text, sub, () { Navigator.pop(context); }),
           _drawerItem(Icons.settings_outlined,    'Settings',     text, sub, () {
             Navigator.pop(context);
             Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
           }),
 
           const Spacer(),
-
-          // App version at bottom
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Text('QuantCalx v1.0 · Offline Calculator',
-              style: TextStyle(color: sub.withValues(alpha: 0.5), fontSize: 11)),
-          ),
         ]),
+      ),
+          ),
+        ),
       ),
     );
   }
