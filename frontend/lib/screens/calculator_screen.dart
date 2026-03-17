@@ -78,8 +78,8 @@ class CalculatorScreen extends StatefulWidget {
 class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateMixin {
   final _bal  = TextEditingController(text: '10000');
   final _ent  = TextEditingController();
-  final _risk = TextEditingController(text: '1.0');
-  final _rr   = TextEditingController(text: '5.0');
+  final _risk = TextEditingController();
+  final _rr   = TextEditingController();
   final _sl   = TextEditingController();
   final _tp   = TextEditingController();
   final _lots = TextEditingController();
@@ -272,6 +272,8 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
     final text = isDark ? kDarkText    : kLightText;
     final sub  = isDark ? kDarkSubText : kLightSubText;
     final p    = widget.pair;
+    // Direction-aware accent: GREEN for BUY, RED for SELL
+    final dirColor = _isBuy ? const Color(0xFF00C853) : Colors.redAccent;
 
     return Scaffold(
       backgroundColor: bg,
@@ -287,11 +289,11 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               decoration: BoxDecoration(
-                color: p.accent.withValues(alpha: 0.12),
+                color: dirColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: p.accent.withValues(alpha: 0.3)),
+                border: Border.all(color: dirColor.withValues(alpha: 0.4)),
               ),
-              child: Text(p.label, style: TextStyle(color: p.accent, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1)),
+              child: Text(p.label, style: TextStyle(color: dirColor, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1)),
             ),
             const SizedBox(width: 8),
             Container(
@@ -347,9 +349,9 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
 
               _sec('ACCOUNT & ENTRY', sub),
               const SizedBox(height: 8),
-              _inpRow('TOTAL AMOUNT', _bal, '', isDark, text, p.accent),
+              _inpRow('TOTAL AMOUNT', _bal, '', isDark, text, dirColor),
               const SizedBox(height: 8),
-              _inpRow('ENTRY PRICE', _ent, '', isDark, text, p.accent),
+              _inpRow('ENTRY PRICE', _ent, '', isDark, text, dirColor),
               const SizedBox(height: 20),
 
               _sec('RISK', sub),
@@ -390,14 +392,14 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
                       decoration: BoxDecoration(
-                        color: p.accent.withValues(alpha: 0.15),
+                        color: dirColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: p.accent.withValues(alpha: 0.4)),
+                        border: Border.all(color: dirColor.withValues(alpha: 0.4)),
                       ),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.swap_horiz_rounded, color: p.accent, size: 14),
+                        Icon(Icons.swap_horiz_rounded, color: dirColor, size: 14),
                         const SizedBox(width: 3),
-                        Text(_riskInDollars ? '%' : 'USD', style: TextStyle(color: p.accent, fontSize: 10, fontWeight: FontWeight.w900)),
+                        Text(_riskInDollars ? '%' : 'USD', style: TextStyle(color: dirColor, fontSize: 10, fontWeight: FontWeight.w900)),
                       ]),
                     ),
                   ),
@@ -414,44 +416,43 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
                 ),
                 padding: const EdgeInsets.all(4),
                 child: Row(children: [
-                  _rrTab('1:X RATIO', 0, p.accent, isDark, text),
+                  _rrTab('1:X RATIO', 0, dirColor, isDark, text),
                   const SizedBox(width: 4),
-                  _rrTab('% PERCENT', 1, p.accent, isDark, text),
+                  _rrTab('% PERCENT', 1, dirColor, isDark, text),
                   const SizedBox(width: 4),
-                  _rrTab('USD', 2, p.accent, isDark, text),
+                  _rrTab('USD', 2, dirColor, isDark, text),
                 ]),
               ),
               const SizedBox(height: 10),
-              if (_rrMode == 0) _inpRow('REWARD RATIO   1 :', _rr, 'e.g. 3 means 1:3', isDark, text, p.accent),
+              if (_rrMode == 0) _inpRow('REWARD RATIO   1 :', _rr, 'e.g. 3 means 1:3', isDark, text, dirColor),
               if (_rrMode == 1) Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _inpRow('RISK % OF BALANCE', _risk, 'e.g. 1%', isDark, text, p.accent),
+                _inpRow('RISK % OF BALANCE', _risk, 'e.g. 1%', isDark, text, dirColor),
                 const SizedBox(height: 8),
-                _inpRow('REWARD % OF BALANCE', _rewardPct, 'e.g. 3%', isDark, text, p.accent),
+                _inpRow('REWARD % OF BALANCE', _rewardPct, 'e.g. 3%', isDark, text, dirColor),
               ]),
               if (_rrMode == 2) Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _inpRow('MAX LOSS (USD)', _riskDollar, 'e.g. 100', isDark, text, p.accent),
+                _inpRow('MAX LOSS (USD)', _riskDollar, 'e.g. 100', isDark, text, dirColor),
                 const SizedBox(height: 8),
-                _inpRow('PROFIT TARGET (USD)', _rewardDollar, 'e.g. 500', isDark, text, p.accent),
+                _inpRow('PROFIT TARGET (USD)', _rewardDollar, 'e.g. 500', isDark, text, dirColor),
               ]),
               const SizedBox(height: 20),
-
               _sec('EXIT POINTS', sub),
               const SizedBox(height: 8),
               Row(children: [
-                Expanded(child: _inpCol('TARGET', _tp, '', isDark, text, p.accent)),
+                Expanded(child: _inpCol('TARGET', _tp, '', isDark, text, dirColor)),
                 const SizedBox(width: 12),
-                Expanded(child: _inpCol('STOP LOSS', _sl, '', isDark, text, p.accent)),
+                Expanded(child: _inpCol('STOP LOSS', _sl, '', isDark, text, dirColor)),
               ]),
               const SizedBox(height: 8),
               Row(children: [
-                Expanded(child: _inpCol('TP PIPS', _tPips, 'Auto', isDark, text, p.accent)),
+                Expanded(child: _inpCol('TP PIPS', _tPips, 'Auto', isDark, text, dirColor)),
                 const SizedBox(width: 12),
-                Expanded(child: _inpCol('SL PIPS', _pips, 'Auto', isDark, text, p.accent)),
+                Expanded(child: _inpCol('SL PIPS', _pips, 'Auto', isDark, text, dirColor)),
               ]),
               const SizedBox(height: 20),
               _sec('MANUAL OVERRIDES', sub),
               const SizedBox(height: 8),
-              _inpRow('LOT SIZE', _lots, 'Auto calculate', isDark, text, p.accent),
+              _inpRow('LOT SIZE', _lots, 'Auto calculate', isDark, text, dirColor),
               const SizedBox(height: 24),
 
               if (_err != null) ...[
@@ -465,7 +466,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
               ],
 
               // CALCULATE button
-              _GlowBtn(label: '▶  CALCULATE', color: p.accent, onTap: _calculate),
+              _GlowBtn(label: _isBuy ? '▲  CALCULATE BUY' : '▼  CALCULATE SELL', color: dirColor, onTap: _calculate),
 
               // Results
               if (_r != null)
