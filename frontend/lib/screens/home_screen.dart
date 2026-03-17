@@ -433,27 +433,6 @@ class _AppDrawer extends StatelessWidget {
               Text(user?.email ?? '', style: TextStyle(color: sub, fontSize: 12)),
               const SizedBox(height: 2),
               Text(user?.phone ?? '', style: TextStyle(color: sub, fontSize: 12)),
-
-              const SizedBox(height: 12),
-
-              // Wallet hash (blockchain feel)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: kSeaBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: kSeaBlue.withValues(alpha: 0.25)),
-                ),
-                child: Row(children: [
-                  const Icon(Icons.link_rounded, color: kSeaBlue, size: 14),
-                  const SizedBox(width: 6),
-                  Expanded(child: Text(
-                    user?.walletHash ?? '—',
-                    style: const TextStyle(color: kSeaBlue, fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.w600),
-                    overflow: TextOverflow.ellipsis,
-                  )),
-                ]),
-              ),
             ]),
           ),
 
@@ -485,7 +464,7 @@ class _AppDrawer extends StatelessWidget {
                   const SizedBox(width: 12),
                   Text('Account', style: TextStyle(color: text, fontWeight: FontWeight.w700, fontSize: 14)),
                   const Spacer(),
-                  Icon(Icons.edit_outlined, color: sub, size: 16),
+                  Icon(Icons.arrow_forward_ios_rounded, color: sub, size: 14),
                 ]),
               ),
             ),
