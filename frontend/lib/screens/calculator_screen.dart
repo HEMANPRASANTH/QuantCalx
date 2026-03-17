@@ -93,6 +93,9 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
   final _riskDollar   = TextEditingController();
   final _rewardPct    = TextEditingController();
   final _rewardDollar = TextEditingController();
+  
+  final _tUsd = TextEditingController(); // Target $
+  final _slUsd = TextEditingController(); // SL $
 
   _Result? _r;
   String?  _err;
@@ -113,14 +116,14 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
   @override void dispose() {
     _ac.dispose();
     for (final c in [_bal, _ent, _risk, _rr, _sl, _tp, _lots, _pips, _tPips,
-                     _riskDollar, _rewardPct, _rewardDollar]) c.dispose();
+                     _riskDollar, _rewardPct, _rewardDollar, _tUsd, _slUsd]) c.dispose();
     super.dispose();
   }
 
   /// Clears all trade fields and resets results (keeps balance).
   void _clearAll() {
     FocusScope.of(context).unfocus();
-    for (final c in [_ent, _sl, _tp, _lots, _pips, _tPips, _riskDollar, _rewardPct, _rewardDollar]) {
+    for (final c in [_ent, _sl, _tp, _lots, _pips, _tPips, _riskDollar, _rewardPct, _rewardDollar, _tUsd, _slUsd]) {
       c.clear();
     }
     _risk.text = '1';
@@ -271,6 +274,8 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
       _lots.text = _r!.lots.toStringAsFixed(2);
       _pips.text = _f2(_r!.slPips);
       _tPips.text = _f2(_r!.tpPips);
+      _tUsd.text = _r!.profitUsd.toStringAsFixed(2);
+      _slUsd.text = _r!.lossUsd.toStringAsFixed(2);
     }
 
     _ac.forward(from: 0);
@@ -341,7 +346,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
-              _sec('TRADE DIRECTION', sub),
+              _sec('Trade', sub),
               const SizedBox(height: 8),
               Row(children: [
                 Expanded(
@@ -388,9 +393,9 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
 
               _sec('Amount & Entry Price', sub),
               const SizedBox(height: 8),
-              _inpRow('TOTAL AMOUNT', _bal, '', isDark, text, dirColor),
+              _inpRow('Amount', _bal, '', isDark, text, dirColor),
               const SizedBox(height: 8),
-              _inpRow('ENTRY PRICE', _ent, '', isDark, text, dirColor),
+              _inpRow('Entry Price', _ent, '', isDark, text, dirColor),
               const SizedBox(height: 20),
 
               _sec('Risk : Reward', sub),
@@ -411,7 +416,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
               ),
               const SizedBox(height: 20),
 
-              _sec('RISK', sub),
+              _sec('Risk', sub),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -469,7 +474,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
               if (_rrMode == 2) _inpRow('PROFIT TARGET (USD)', _rewardDollar, 'e.g. 500', isDark, text, dirColor),
               const SizedBox(height: 20),
               
-              _sec('TARGET AND STOPLOSS', sub),
+              _sec('Target & Stop Loss', sub),
               const SizedBox(height: 8),
               Row(children: [
                 Expanded(child: _inpCol('TARGET', _tp, '', isDark, text, dirColor)),
@@ -482,8 +487,14 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
                 const SizedBox(width: 12),
                 Expanded(child: _inpCol('SL PIPS', _pips, 'Auto', isDark, text, dirColor)),
               ]),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: _inpCol(r'TARGET ( $ )', _tUsd, 'Auto', isDark, text, dirColor)),
+                const SizedBox(width: 12),
+                Expanded(child: _inpCol(r'SL ( $ )', _slUsd, 'Auto', isDark, text, dirColor)),
+              ]),
               const SizedBox(height: 20),
-              _sec('MANUAL OVERRIDES', sub),
+              _sec('Lot Size', sub),
               const SizedBox(height: 8),
               _inpRow('LOT SIZE', _lots, 'Auto calculate', isDark, text, dirColor),
               const SizedBox(height: 24),
