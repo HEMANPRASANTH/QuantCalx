@@ -78,8 +78,8 @@ class CalculatorScreen extends StatefulWidget {
 class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateMixin {
   final _bal  = TextEditingController(text: '10000');
   final _ent  = TextEditingController();
-  final _risk = TextEditingController();
-  final _rr   = TextEditingController();
+  final _risk = TextEditingController(text: '1');
+  final _rr   = TextEditingController(text: '1');
   final _sl   = TextEditingController();
   final _tp   = TextEditingController();
   final _lots = TextEditingController();
@@ -115,6 +115,17 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
     for (final c in [_bal, _ent, _risk, _rr, _sl, _tp, _lots, _pips, _tPips,
                      _riskDollar, _rewardPct, _rewardDollar]) c.dispose();
     super.dispose();
+  }
+
+  /// Clears all trade fields and resets results (keeps balance).
+  void _clearAll() {
+    FocusScope.of(context).unfocus();
+    for (final c in [_ent, _sl, _tp, _lots, _pips, _tPips, _riskDollar, _rewardPct, _rewardDollar]) {
+      c.clear();
+    }
+    _risk.text = '1';
+    _rr.text   = '1';
+    setState(() { _r = null; _err = null; _ac.reset(); });
   }
 
   void _calculate() {
@@ -307,6 +318,20 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
               decoration: BoxDecoration(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.04), borderRadius: BorderRadius.circular(8)),
               child: Text(p.category, style: TextStyle(color: sub, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
             ),
+            const Spacer(),
+            // CLEAR button
+            GestureDetector(
+              onTap: _clearAll,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                ),
+                child: const Text('CLEAR', style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
+              ),
+            ),
           ]),
         ),
 
@@ -321,7 +346,11 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
               Row(children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => setState(() { _isBuy = true; _ac.reverse(); _r = null; }),
+                    onTap: () {
+                      if (_isBuy) return; // already BUY, do nothing
+                      _clearAll();
+                      setState(() { _isBuy = true; });
+                    },
                     child: Container(
                       height: 48,
                       decoration: BoxDecoration(
@@ -337,7 +366,11 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
                 const SizedBox(width: 12),
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => setState(() { _isBuy = false; _ac.reverse(); _r = null; }),
+                    onTap: () {
+                      if (!_isBuy) return; // already SELL, do nothing
+                      _clearAll();
+                      setState(() { _isBuy = false; });
+                    },
                     child: Container(
                       height: 48,
                       decoration: BoxDecoration(
