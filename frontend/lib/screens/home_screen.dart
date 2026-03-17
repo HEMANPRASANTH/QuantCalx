@@ -7,6 +7,7 @@ import '../app_theme.dart';
 import '../providers/user_provider.dart';
 import '../providers/theme_provider.dart';
 import '../screens/settings_screen.dart';
+import '../screens/account_screen.dart';
 import 'calculator_screen.dart';
 
 // ─── PAIR DATA ────────────────────────────────────────────────────────────────
@@ -463,7 +464,10 @@ class _AppDrawer extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: GestureDetector(
-              onTap: () => _openEditProfile(context, user),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountScreen()));
+              },
               child: Container(
                 decoration: BoxDecoration(
                   color: kSeaBlue.withValues(alpha: 0.1),
@@ -540,43 +544,6 @@ class _AppDrawer extends StatelessWidget {
       title: Text(label, style: TextStyle(color: text, fontWeight: FontWeight.w700, fontSize: 14)),
       onTap: onTap,
     );
-
-  Future<void> _openEditProfile(BuildContext context, UserProfile? user) async {
-    final nameCtrl  = TextEditingController(text: user?.name ?? '');
-    final emailCtrl = TextEditingController(text: user?.email ?? '');
-    final phoneCtrl = TextEditingController(text: user?.phone ?? '');
-    await showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Edit Account', style: TextStyle(fontWeight: FontWeight.w900)),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: nameCtrl,  decoration: const InputDecoration(labelText: 'Name',         prefixIcon: Icon(Icons.person_outline))),
-          const SizedBox(height: 10),
-          TextField(controller: emailCtrl, keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined))),
-          const SizedBox(height: 10),
-          TextField(controller: phoneCtrl, keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(labelText: 'Mobile Number', prefixIcon: Icon(Icons.phone_outlined))),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('CANCEL')),
-          ElevatedButton(
-            onPressed: () async {
-              final updated = (user ?? UserProfile(name: '', email: '', phone: '')).copyWith(
-                name: nameCtrl.text.trim(),
-                email: emailCtrl.text.trim(),
-                phone: phoneCtrl.text.trim(),
-              );
-              await ctx.read<UserProvider>().saveProfile(updated);
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-            child: const Text('SAVE'),
-          ),
-        ],
-      ),
-    );
-  }
 
   Future<void> _pickAvatar(BuildContext context) async {
     final picker = ImagePicker();
