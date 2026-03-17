@@ -103,6 +103,12 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
     super.initState();
     _ac = AnimationController(vsync: this, duration: const Duration(milliseconds: 380));
     _fade = CurvedAnimation(parent: _ac, curve: Curves.easeOut);
+    // Auto-mirror risk value into reward ratio (mode 0) when user types risk
+    _risk.addListener(() {
+      if (_rrMode == 0 && _rr.text.isEmpty) {
+        _rr.text = _risk.text;
+      }
+    });
   }
   @override void dispose() {
     _ac.dispose();
