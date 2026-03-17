@@ -87,6 +87,13 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
   final _tPips = TextEditingController(); // TP Pips
 
   bool _isBuy = true;
+  bool _riskInDollars = false;
+  int  _rrMode = 0; // 0=Ratio, 1=Percent, 2=Dollar
+
+  final _riskDollar   = TextEditingController();
+  final _rewardPct    = TextEditingController();
+  final _rewardDollar = TextEditingController();
+
   _Result? _r;
   String?  _err;
   late AnimationController _ac;
@@ -99,7 +106,8 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
   }
   @override void dispose() {
     _ac.dispose();
-    for (final c in [_bal, _ent, _risk, _rr, _sl, _tp, _lots, _pips, _tPips]) c.dispose();
+    for (final c in [_bal, _ent, _risk, _rr, _sl, _tp, _lots, _pips, _tPips,
+                     _riskDollar, _rewardPct, _rewardDollar]) c.dispose();
     super.dispose();
   }
 
@@ -109,8 +117,48 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
 
     final b = double.tryParse(_bal.text);
     double? e = double.tryParse(_ent.text);
-    double? r = double.tryParse(_risk.text);
-    double? rr = double.tryParse(_rr.text);
+    double? r;
+    double? rr;
+
+    // Resolve Risk from mode
+    if (_riskInDollars && _rrMode != 2) {
+      final rAmt = double.tryParse(_riskDollar.text);
+      if (b != null && b > 0 && rAmt != null && rAmt > 0) {
+        r = (rAmt / b) * 100;
+        _risk.text = r.toStringAsFixed(2);
+      }
+    } else {
+      r = double.tryParse(_risk.text);
+    }
+
+    // Resolve R:R from mode
+    switch (_rrMode) {
+      case 0:
+        rr = double.tryParse(_rr.text);
+        break;
+      case 1:
+        final rewardPct = double.tryParse(_rewardPct.text);
+        final riskPctVal = double.tryParse(_risk.text);
+        if (riskPctVal != null && riskPctVal > 0 && rewardPct != null && rewardPct > 0) {
+          r = riskPctVal;
+          rr = rewardPct / r;
+          _rr.text = rr.toStringAsFixed(2);
+        }
+        break;
+      case 2:
+        final riskAmt   = double.tryParse(_riskDollar.text);
+        final rewardAmt = double.tryParse(_rewardDollar.text);
+        if (b != null && b > 0 && riskAmt != null && riskAmt > 0) {
+          r = (riskAmt / b) * 100;
+          _risk.text = r.toStringAsFixed(2);
+          if (rewardAmt != null && rewardAmt > 0) {
+            rr = rewardAmt / riskAmt;
+            _rr.text = rr.toStringAsFixed(2);
+          }
+        }
+        break;
+    }
+
     double? sl = double.tryParse(_sl.text);
     double? tp = double.tryParse(_tp.text);
     double? slPips = double.tryParse(_pips.text);
@@ -304,12 +352,86 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
               _inpRow('ENTRY PRICE', _ent, '', isDark, text, p.accent),
               const SizedBox(height: 20),
 
-              _sec('RISK & REWARD', sub),
+              _sec('RISK', sub),
               const SizedBox(height: 8),
-              Row(children: [
-                Expanded(child: _inpCol('RISK %', _risk, '', isDark, text, p.accent)),
-                const SizedBox(width: 12),
-                Expanded(child: _inpCol('REWARD (R:R)', _rr, '', isDark, text, p.accent)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isDark ? kDarkCard : kLightCard,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
+                ),
+                child: Row(children: [
+                  Expanded(
+                    flex: 2,
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(_riskInDollars ? 'RISK AMOUNT' : 'RISK %',
+                        style: TextStyle(color: text, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                      Text(_riskInDollars ? 'Max loss you accept' : 'Of your balance',
+                        style: TextStyle(color: sub, fontSize: 9)),
+                    ]),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: TextField(
+                      controller: _riskInDollars ? _riskDollar : _risk,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: text),
+                      textAlign: TextAlign.right,
+                      decoration: const InputDecoration(
+                        isDense: true, border: InputBorder.none, focusedBorder: InputBorder.none,
+                        enabledBorder: InputBorder.none, filled: false, contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => setState(() { _riskInDollars = !_riskInDollars; _r = null; _ac.reset(); }),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: p.accent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: p.accent.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.swap_horiz_rounded, color: p.accent, size: 14),
+                        const SizedBox(width: 3),
+                        Text(_riskInDollars ? '%' : 'USD', style: TextStyle(color: p.accent, fontSize: 10, fontWeight: FontWeight.w900)),
+                      ]),
+                    ),
+                  ),
+                ]),
+              ),
+              const SizedBox(height: 20),
+
+              _sec('RISK TO REWARD', sub),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: isDark ? kDarkCard : kLightCard,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.all(4),
+                child: Row(children: [
+                  _rrTab('1:X RATIO', 0, p.accent, isDark, text),
+                  const SizedBox(width: 4),
+                  _rrTab('% PERCENT', 1, p.accent, isDark, text),
+                  const SizedBox(width: 4),
+                  _rrTab('USD', 2, p.accent, isDark, text),
+                ]),
+              ),
+              const SizedBox(height: 10),
+              if (_rrMode == 0) _inpRow('REWARD RATIO   1 :', _rr, 'e.g. 3 means 1:3', isDark, text, p.accent),
+              if (_rrMode == 1) Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                _inpRow('RISK % OF BALANCE', _risk, 'e.g. 1%', isDark, text, p.accent),
+                const SizedBox(height: 8),
+                _inpRow('REWARD % OF BALANCE', _rewardPct, 'e.g. 3%', isDark, text, p.accent),
+              ]),
+              if (_rrMode == 2) Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                _inpRow('MAX LOSS (USD)', _riskDollar, 'e.g. 100', isDark, text, p.accent),
+                const SizedBox(height: 8),
+                _inpRow('PROFIT TARGET (USD)', _rewardDollar, 'e.g. 500', isDark, text, p.accent),
               ]),
               const SizedBox(height: 20),
 
@@ -416,6 +538,26 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
 
   Widget _sec(String t, Color c) => Text(t,
     style: TextStyle(color: c, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5));
+
+  Widget _rrTab(String label, int mode, Color accent, bool isDark, Color text) => Expanded(
+    child: GestureDetector(
+      onTap: () => setState(() { _rrMode = mode; _r = null; _ac.reset(); }),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: _rrMode == mode ? accent : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        alignment: Alignment.center,
+        child: Text(label, textAlign: TextAlign.center, style: TextStyle(
+          color: _rrMode == mode ? Colors.white : (isDark ? kDarkSubText : kLightSubText),
+          fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5,
+        )),
+      ),
+    ),
+  );
 
   Widget _inpCol(String label, TextEditingController ctrl, String hint, bool isDark, Color text, Color accent) =>
     Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
