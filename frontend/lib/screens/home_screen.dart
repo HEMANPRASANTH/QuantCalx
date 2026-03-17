@@ -126,7 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: kSeaBlue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(_isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded, color: kSeaBlue, size: 20),
+                      child: Icon(_isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded, color: Colors.white, size: 20),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -137,7 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: PopupMenuButton<String>(
-                      icon: const Icon(Icons.sort_rounded, color: kSeaBlue, size: 20),
+                      icon: const Icon(Icons.sort_rounded, color: Colors.white, size: 20),
                       position: PopupMenuPosition.under,
                       color: isDark ? kDarkCard : kLightCard,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -456,13 +456,69 @@ class _AppDrawer extends StatelessWidget {
             ]),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
 
           // ─── Menu Items ────────────────────────────────────────────
-          _drawerItem(Icons.settings_outlined,    'Settings',     text, sub, () {
-            Navigator.pop(context);
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
-          }),
+          // ACCOUNT box
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: GestureDetector(
+              onTap: () => _openEditProfile(context, user),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: kSeaBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: kSeaBlue.withValues(alpha: 0.25)),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(children: [
+                  Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(color: kSeaBlue.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.person_outline_rounded, color: kSeaBlue, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Text('Account', style: TextStyle(color: text, fontWeight: FontWeight.w700, fontSize: 14)),
+                  const Spacer(),
+                  Icon(Icons.edit_outlined, color: sub, size: 16),
+                ]),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // SETTINGS box
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: kSeaBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: kSeaBlue.withValues(alpha: 0.25)),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(children: [
+                  Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(color: kSeaBlue.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.settings_outlined, color: kSeaBlue, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Text('Settings', style: TextStyle(color: text, fontWeight: FontWeight.w700, fontSize: 14)),
+                  const Spacer(),
+                  Icon(Icons.arrow_forward_ios_rounded, color: sub, size: 14),
+                ]),
+              ),
+            ),
+          ),
 
           const Spacer(),
         ]),
@@ -485,6 +541,43 @@ class _AppDrawer extends StatelessWidget {
       onTap: onTap,
     );
 
+  Future<void> _openEditProfile(BuildContext context, UserProfile? user) async {
+    final nameCtrl  = TextEditingController(text: user?.name ?? '');
+    final emailCtrl = TextEditingController(text: user?.email ?? '');
+    final phoneCtrl = TextEditingController(text: user?.phone ?? '');
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Edit Account', style: TextStyle(fontWeight: FontWeight.w900)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: nameCtrl,  decoration: const InputDecoration(labelText: 'Name',         prefixIcon: Icon(Icons.person_outline))),
+          const SizedBox(height: 10),
+          TextField(controller: emailCtrl, keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined))),
+          const SizedBox(height: 10),
+          TextField(controller: phoneCtrl, keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(labelText: 'Mobile Number', prefixIcon: Icon(Icons.phone_outlined))),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('CANCEL')),
+          ElevatedButton(
+            onPressed: () async {
+              final updated = (user ?? UserProfile(name: '', email: '', phone: '')).copyWith(
+                name: nameCtrl.text.trim(),
+                email: emailCtrl.text.trim(),
+                phone: phoneCtrl.text.trim(),
+              );
+              await ctx.read<UserProvider>().saveProfile(updated);
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: const Text('SAVE'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _pickAvatar(BuildContext context) async {
     final picker = ImagePicker();
     final img = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
@@ -506,11 +599,11 @@ class _Avatar extends StatelessWidget {
     }
     return Container(
       width: 80, height: 80,
-      decoration: const BoxDecoration(color: kSeaBlue, shape: BoxShape.circle),
+      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
       alignment: Alignment.center,
       child: Text(
         user?.initials ?? 'QC',
-        style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900, letterSpacing: 1),
+        style: const TextStyle(color: Colors.black, fontSize: 26, fontWeight: FontWeight.w900, letterSpacing: 1),
       ),
     );
   }
