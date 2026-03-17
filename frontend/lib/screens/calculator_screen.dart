@@ -393,6 +393,24 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
               _inpRow('ENTRY PRICE', _ent, '', isDark, text, dirColor),
               const SizedBox(height: 20),
 
+              _sec('RISK TO REWARD MODE', sub),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: isDark ? kDarkCard : kLightCard,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.all(4),
+                child: Row(children: [
+                  _rrTab('1:X RATIO', 0, dirColor, isDark, text),
+                  const SizedBox(width: 4),
+                  _rrTab('% PERCENT', 1, dirColor, isDark, text),
+                  const SizedBox(width: 4),
+                  _rrTab('USD', 2, dirColor, isDark, text),
+                ]),
+              ),
+              const SizedBox(height: 20),
+
               _sec('RISK', sub),
               const SizedBox(height: 8),
               Container(
@@ -446,36 +464,12 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
               ),
               const SizedBox(height: 20),
 
-              _sec('RISK TO REWARD', sub),
-              const SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark ? kDarkCard : kLightCard,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.all(4),
-                child: Row(children: [
-                  _rrTab('1:X RATIO', 0, dirColor, isDark, text),
-                  const SizedBox(width: 4),
-                  _rrTab('% PERCENT', 1, dirColor, isDark, text),
-                  const SizedBox(width: 4),
-                  _rrTab('USD', 2, dirColor, isDark, text),
-                ]),
-              ),
-              const SizedBox(height: 10),
               if (_rrMode == 0) _inpRow('REWARD RATIO   1 :', _rr, 'e.g. 3 means 1:3', isDark, text, dirColor),
-              if (_rrMode == 1) Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _inpRow('RISK % OF BALANCE', _risk, 'e.g. 1%', isDark, text, dirColor),
-                const SizedBox(height: 8),
-                _inpRow('REWARD % OF BALANCE', _rewardPct, 'e.g. 3%', isDark, text, dirColor),
-              ]),
-              if (_rrMode == 2) Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _inpRow('MAX LOSS (USD)', _riskDollar, 'e.g. 100', isDark, text, dirColor),
-                const SizedBox(height: 8),
-                _inpRow('PROFIT TARGET (USD)', _rewardDollar, 'e.g. 500', isDark, text, dirColor),
-              ]),
+              if (_rrMode == 1) _inpRow('REWARD % OF BALANCE', _rewardPct, 'e.g. 3%', isDark, text, dirColor),
+              if (_rrMode == 2) _inpRow('PROFIT TARGET (USD)', _rewardDollar, 'e.g. 500', isDark, text, dirColor),
               const SizedBox(height: 20),
-              _sec('EXIT POINTS', sub),
+              
+              _sec('TARGET AND STOPLOSS', sub),
               const SizedBox(height: 8),
               Row(children: [
                 Expanded(child: _inpCol('TARGET', _tp, '', isDark, text, dirColor)),
