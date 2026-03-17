@@ -386,14 +386,14 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
               ]),
               const SizedBox(height: 20),
 
-              _sec('ACCOUNT & ENTRY', sub),
+              _sec('Amount & Entry Price', sub),
               const SizedBox(height: 8),
               _inpRow('TOTAL AMOUNT', _bal, '', isDark, text, dirColor),
               const SizedBox(height: 8),
               _inpRow('ENTRY PRICE', _ent, '', isDark, text, dirColor),
               const SizedBox(height: 20),
 
-              _sec('RISK TO REWARD MODE', sub),
+              _sec('Risk : Reward', sub),
               const SizedBox(height: 8),
               Container(
                 decoration: BoxDecoration(
@@ -402,11 +402,11 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
                 ),
                 padding: const EdgeInsets.all(4),
                 child: Row(children: [
-                  _rrTab('1:X RATIO', 0, dirColor, isDark, text),
+                  _rrTab('Ratio ( : )', 0, dirColor, isDark, text),
                   const SizedBox(width: 4),
-                  _rrTab('% PERCENT', 1, dirColor, isDark, text),
+                  _rrTab('Percent ( % )', 1, dirColor, isDark, text),
                   const SizedBox(width: 4),
-                  _rrTab('USD', 2, dirColor, isDark, text),
+                  _rrTab('USD ( \$ )', 2, dirColor, isDark, text),
                 ]),
               ),
               const SizedBox(height: 20),
