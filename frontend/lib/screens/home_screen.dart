@@ -397,7 +397,7 @@ class _AppDrawer extends StatelessWidget {
       elevation: 0,
       width: MediaQuery.of(context).size.width * 0.8,
       child: Container(
-        color: widget.isDark ? surface.withValues(alpha: 0.95) : surface,
+        color: isDarkNow ? surface.withValues(alpha: 0.95) : surface,
         child: SafeArea(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
   
@@ -505,7 +505,6 @@ class _AppDrawer extends StatelessWidget {
             const Spacer(),
           ]),
         ),
-      ),
       ),
     );
   }

@@ -85,7 +85,7 @@ class CalculatorScreen extends StatefulWidget {
 }
 
 class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateMixin {
-  final _bal  = TextEditingController(text: '10000');
+  final _bal  = TextEditingController();
   final _ent  = TextEditingController();
   final _risk = TextEditingController(text: '1');
   final _rr   = TextEditingController(text: '1');
@@ -150,7 +150,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
     double? rr;
 
     // Resolve Risk from mode
-    if (_riskInDollars && _rrMode != 2) {
+    if (_rrMode == 2) {
       final rAmt = double.tryParse(_riskDollar.text);
       if (b != null && b > 0 && rAmt != null && rAmt > 0) {
         r = (rAmt / b) * 100;
@@ -355,7 +355,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
-              _sec('Trade', sub),
+              _sec('TRADE ORDERS', sub),
               const SizedBox(height: 8),
               Row(children: [
                 Expanded(
@@ -373,7 +373,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
                         border: Border.all(color: _isBuy ? Colors.green : Colors.transparent),
                       ),
                       alignment: Alignment.center,
-                      child: Text('BUY (LONG)', style: TextStyle(color: _isBuy ? Colors.greenAccent : text, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                      child: Text('BUY', style: TextStyle(color: _isBuy ? Colors.greenAccent : text, fontWeight: FontWeight.bold, letterSpacing: 1)),
                     ),
                   ),
                 ),
@@ -393,21 +393,21 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
                         border: Border.all(color: !_isBuy ? Colors.red : Colors.transparent),
                       ),
                       alignment: Alignment.center,
-                      child: Text('SELL (SHORT)', style: TextStyle(color: !_isBuy ? Colors.redAccent : text, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                      child: Text('SELL', style: TextStyle(color: !_isBuy ? Colors.redAccent : text, fontWeight: FontWeight.bold, letterSpacing: 1)),
                     ),
                   ),
                 ),
               ]),
               const SizedBox(height: 20),
 
-              _sec('Amount & Entry Price', sub),
+              _sec('AMOUNT & ENTRY PRICE', sub),
               const SizedBox(height: 8),
               _inpRow('Amount', _bal, '', isDark, text, dirColor),
               const SizedBox(height: 8),
               _inpRow('Entry Price', _ent, '', isDark, text, dirColor),
               const SizedBox(height: 20),
 
-              _sec('Risk : Reward', sub),
+              _sec('RISK : REWARD', sub),
               const SizedBox(height: 8),
               Container(
                 decoration: BoxDecoration(
@@ -425,57 +425,10 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
               ),
               const SizedBox(height: 20),
 
-              _sec('Risk', sub),
+              _sec('RISK', sub),
               const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isDark ? kDarkCard : kLightCard,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
-                ),
-                child: Row(children: [
-                  Expanded(
-                    flex: 2,
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(_riskInDollars ? 'RISK AMOUNT' : 'RISK %',
-                        style: TextStyle(color: text, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-                      Text(_riskInDollars ? 'Max loss you accept' : 'Of your balance',
-                        style: TextStyle(color: sub, fontSize: 9)),
-                    ]),
-                  ),
-                  Expanded(
-                    flex: 3,
-                    child: TextField(
-                      controller: _riskInDollars ? _riskDollar : _risk,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: text),
-                      textAlign: TextAlign.right,
-                      decoration: const InputDecoration(
-                        isDense: true, border: InputBorder.none, focusedBorder: InputBorder.none,
-                        enabledBorder: InputBorder.none, filled: false, contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => setState(() { _riskInDollars = !_riskInDollars; _r = null; _ac.reset(); }),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: dirColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: dirColor.withValues(alpha: 0.4)),
-                      ),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.swap_horiz_rounded, color: dirColor, size: 14),
-                        const SizedBox(width: 3),
-                        Text(_riskInDollars ? '%' : 'USD', style: TextStyle(color: dirColor, fontSize: 10, fontWeight: FontWeight.w900)),
-                      ]),
-                    ),
-                  ),
-                ]),
-              ),
+              if (_rrMode == 0 || _rrMode == 1) _inpRow('RISK % OF BALANCE', _risk, 'e.g. 1 means 1%', isDark, text, dirColor),
+              if (_rrMode == 2) _inpRow('RISK AMOUNT (USD)', _riskDollar, 'e.g. 100', isDark, text, dirColor),
               const SizedBox(height: 20),
 
               if (_rrMode == 0) _inpRow('REWARD RATIO   1 :', _rr, 'e.g. 3 means 1:3', isDark, text, dirColor),
