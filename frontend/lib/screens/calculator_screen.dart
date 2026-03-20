@@ -44,21 +44,30 @@ _Result? _calc({required String pair, required double balance, required double e
   double sl, tp;
   if (slP != null && slP > 0) { 
     sl = slP; 
+    // Validation constraint: Stop Loss MUST be strictly below entry for BUY. Above entry for SELL.
+    if (isBuy && sl >= entry) sl = entry - (entry * 0.005);
+    if (!isBuy && sl <= entry) sl = entry + (entry * 0.005);
   } else { 
     final buf = entry * 0.005; 
     sl = isBuy ? entry - buf : entry + buf; 
   }
   
   final slDist = (entry - sl).abs();
+  // Prevent divide by zero (SL identical to entry price)
+  if (slDist == 0) return null;
+
   tp = isBuy ? entry + (slDist * rrRatio) : entry - (slDist * rrRatio);
 
   final slPips = slDist / p.pipSize;
   final tpPips = (tp - entry).abs() / p.pipSize;
   final lots = riskUsd / (slPips * p.pipValPerLot);
+  if (lots.isInfinite || lots.isNaN) return null; // Edge case protection
+
   final units = lots * p.contractSize;
   final notional = units * entry;
   final profitUsd = tpPips * p.pipValPerLot * lots;
   final lossUsd   = slPips * p.pipValPerLot * lots;
+
   return _Result(sl: sl, tp: tp, slPips: slPips, tpPips: tpPips, rr: rrRatio,
     riskUsd: riskUsd, lots: lots, units: units, pipVal: p.pipValPerLot,
     notional: notional,

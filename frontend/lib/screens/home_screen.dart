@@ -256,17 +256,20 @@ class _PairCardState extends State<_PairCard> with SingleTickerProviderStateMixi
       onTapCancel: () => _ac.reverse(),
       child: ScaleTransition(
         scale: _scale,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: Container(
-              decoration: BoxDecoration(
-                color: cardColor.withValues(alpha: widget.isDark ? 0.35 : 0.6),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: p.accent.withValues(alpha: 0.4)),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Container(
+          decoration: BoxDecoration(
+            color: widget.isDark ? cardColor.withValues(alpha: 0.9) : cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: p.accent.withValues(alpha: widget.isDark ? 0.4 : 0.2)),
+            boxShadow: [
+              BoxShadow(
+                color: widget.isDark ? Colors.black.withValues(alpha: 0.3) : p.accent.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              )
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(children: [
             Container(
               width: 40, height: 40,
@@ -284,8 +287,6 @@ class _PairCardState extends State<_PairCard> with SingleTickerProviderStateMixi
               Text(p.category, style: TextStyle(color: widget.isDark ? kDarkSubText : kLightSubText, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
             ]),
           ]),
-        ),
-          ),
         ),
       ),
     );
@@ -338,39 +339,40 @@ class _ListCardState extends State<_ListCard> with SingleTickerProviderStateMixi
       onTapCancel: () => _ac.reverse(),
       child: ScaleTransition(
         scale: _scale,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: Container(
-              decoration: BoxDecoration(
-                color: cardColor.withValues(alpha: widget.isDark ? 0.35 : 0.6),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: p.accent.withValues(alpha: 0.4)),
+        child: Container(
+          decoration: BoxDecoration(
+            color: widget.isDark ? cardColor.withValues(alpha: 0.9) : cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: p.accent.withValues(alpha: widget.isDark ? 0.4 : 0.2)),
+            boxShadow: [
+              BoxShadow(
+                color: widget.isDark ? Colors.black.withValues(alpha: 0.3) : p.accent.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              )
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Row(children: [
+            Container(
+              width: 48, height: 48,
+              decoration: BoxDecoration(color: p.accent.withValues(alpha: 0.15), shape: BoxShape.circle),
+              alignment: Alignment.center,
+              child: Text(
+                p.category == 'CRYPTO' ? '₿' : p.category == 'COMMODITY' ? '⚡' : '💱',
+                style: const TextStyle(fontSize: 22),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Row(children: [
-                Container(
-                  width: 48, height: 48,
-                  decoration: BoxDecoration(color: p.accent.withValues(alpha: 0.15), shape: BoxShape.circle),
-                  alignment: Alignment.center,
-                  child: Text(
-                    p.category == 'CRYPTO' ? '₿' : p.category == 'COMMODITY' ? '⚡' : '💱',
-                    style: const TextStyle(fontSize: 22),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Text(p.label, style: TextStyle(color: p.accent, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                    const SizedBox(height: 4),
-                    Text(p.category, style: TextStyle(color: widget.isDark ? kDarkSubText : kLightSubText, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
-                  ]),
-                ),
-                Icon(Icons.arrow_forward_ios_rounded, color: p.accent.withValues(alpha: 0.5), size: 16),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text(p.label, style: TextStyle(color: p.accent, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                const SizedBox(height: 4),
+                Text(p.category, style: TextStyle(color: widget.isDark ? kDarkSubText : kLightSubText, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
               ]),
             ),
-          ),
+            Icon(Icons.arrow_forward_ios_rounded, color: p.accent.withValues(alpha: 0.5), size: 16),
+          ]),
         ),
       ),
     );
@@ -394,120 +396,116 @@ class _AppDrawer extends StatelessWidget {
       backgroundColor: Colors.transparent,
       elevation: 0,
       width: MediaQuery.of(context).size.width * 0.8,
-      child: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Container(
-            color: surface.withValues(alpha: isDarkNow ? 0.35 : 0.6),
-            child: SafeArea(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-          // ─ Profile Header ─────────────────────────────────────────
-          Container(
-            width: double.infinity,
-            color: Colors.transparent,
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-              // Avatar + edit button
-              Stack(children: [
-                _Avatar(user: user),
-                Positioned(
-                  bottom: 0, right: 0,
-                  child: GestureDetector(
-                    onTap: () => _pickAvatar(context),
-                    child: Container(
-                      width: 28, height: 28,
-                      decoration: const BoxDecoration(color: kSeaBlue, shape: BoxShape.circle),
-                      alignment: Alignment.center,
-                      child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 14),
+      child: Container(
+        color: widget.isDark ? surface.withValues(alpha: 0.95) : surface,
+        child: SafeArea(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+  
+            // ─ Profile Header ─────────────────────────────────────────
+            Container(
+              width: double.infinity,
+              color: Colors.transparent,
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+  
+                // Avatar + edit button
+                Stack(children: [
+                  _Avatar(user: user),
+                  Positioned(
+                    bottom: 0, right: 0,
+                    child: GestureDetector(
+                      onTap: () => _pickAvatar(context),
+                      child: Container(
+                        width: 28, height: 28,
+                        decoration: const BoxDecoration(color: kSeaBlue, shape: BoxShape.circle),
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 14),
+                      ),
                     ),
                   ),
-                ),
+                ]),
+                const SizedBox(height: 14),
+  
+                // Name
+                Text(user?.name ?? 'Trader', style: TextStyle(color: text, fontSize: 18, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 2),
+                Text(user?.email ?? '', style: TextStyle(color: sub, fontSize: 12)),
+                const SizedBox(height: 2),
+                Text(user?.phone ?? '', style: TextStyle(color: sub, fontSize: 12)),
               ]),
-              const SizedBox(height: 14),
-
-              // Name
-              Text(user?.name ?? 'Trader', style: TextStyle(color: text, fontSize: 18, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 2),
-              Text(user?.email ?? '', style: TextStyle(color: sub, fontSize: 12)),
-              const SizedBox(height: 2),
-              Text(user?.phone ?? '', style: TextStyle(color: sub, fontSize: 12)),
-            ]),
-          ),
-
-          const SizedBox(height: 10),
-
-          // ─── Menu Items ────────────────────────────────────────────
-          // ACCOUNT box
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: GestureDetector(
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountScreen()));
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  color: kSeaBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: kSeaBlue.withValues(alpha: 0.25)),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Row(children: [
-                  Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(color: kSeaBlue.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.person_outline_rounded, color: kSeaBlue, size: 20),
+            ),
+  
+            const SizedBox(height: 10),
+  
+            // ─── Menu Items ────────────────────────────────────────────
+            // ACCOUNT box
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountScreen()));
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: kSeaBlue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: kSeaBlue.withValues(alpha: 0.25)),
                   ),
-                  const SizedBox(width: 12),
-                  Text('Account', style: TextStyle(color: text, fontWeight: FontWeight.w700, fontSize: 14)),
-                  const Spacer(),
-                  Icon(Icons.arrow_forward_ios_rounded, color: sub, size: 14),
-                ]),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Row(children: [
+                    Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(color: kSeaBlue.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.person_outline_rounded, color: kSeaBlue, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Text('Account', style: TextStyle(color: text, fontWeight: FontWeight.w700, fontSize: 14)),
+                    const Spacer(),
+                    Icon(Icons.arrow_forward_ios_rounded, color: sub, size: 14),
+                  ]),
+                ),
               ),
             ),
-          ),
-
-          const SizedBox(height: 10),
-
-          // SETTINGS box
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: GestureDetector(
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  color: kSeaBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: kSeaBlue.withValues(alpha: 0.25)),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Row(children: [
-                  Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(color: kSeaBlue.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.settings_outlined, color: kSeaBlue, size: 20),
+  
+            const SizedBox(height: 10),
+  
+            // SETTINGS box
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: kSeaBlue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: kSeaBlue.withValues(alpha: 0.25)),
                   ),
-                  const SizedBox(width: 12),
-                  Text('Settings', style: TextStyle(color: text, fontWeight: FontWeight.w700, fontSize: 14)),
-                  const Spacer(),
-                  Icon(Icons.arrow_forward_ios_rounded, color: sub, size: 14),
-                ]),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Row(children: [
+                    Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(color: kSeaBlue.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.settings_outlined, color: kSeaBlue, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Text('Settings', style: TextStyle(color: text, fontWeight: FontWeight.w700, fontSize: 14)),
+                    const Spacer(),
+                    Icon(Icons.arrow_forward_ios_rounded, color: sub, size: 14),
+                  ]),
+                ),
               ),
             ),
-          ),
-
-          const Spacer(),
-        ]),
-      ),
-          ),
+  
+            const Spacer(),
+          ]),
         ),
+      ),
       ),
     );
   }
