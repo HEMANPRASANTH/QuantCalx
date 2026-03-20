@@ -60,8 +60,13 @@ _Result? _calc({required String pair, required double balance, required double e
 
   final slPips = slDist / p.pipSize;
   final tpPips = (tp - entry).abs() / p.pipSize;
-  final lots = riskUsd / (slPips * p.pipValPerLot);
+  
+  double lots = riskUsd / (slPips * p.pipValPerLot);
   if (lots.isInfinite || lots.isNaN) return null; // Edge case protection
+
+  if (lots < 0.01) lots = 0.01;
+  else if (lots > 500.0) lots = 500.0;
+  lots = double.parse(lots.toStringAsFixed(2));
 
   final units = lots * p.contractSize;
   final notional = units * entry;
@@ -102,10 +107,6 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
   final _riskDollar   = TextEditingController();
   final _rewardPct    = TextEditingController();
   final _rewardDollar = TextEditingController();
-  
-  final _tUsd = TextEditingController(); // Target $
-  final _slUsd = TextEditingController(); // SL $
-
   _Result? _r;
   String?  _err;
   late AnimationController _ac;
@@ -125,14 +126,14 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
   @override void dispose() {
     _ac.dispose();
     for (final c in [_bal, _ent, _risk, _rr, _sl, _tp, _lots, _pips, _tPips,
-                     _riskDollar, _rewardPct, _rewardDollar, _tUsd, _slUsd]) c.dispose();
+                     _riskDollar, _rewardPct, _rewardDollar]) c.dispose();
     super.dispose();
   }
 
   /// Clears all trade fields and resets results (keeps balance).
   void _clearAll() {
     FocusScope.of(context).unfocus();
-    for (final c in [_ent, _sl, _tp, _lots, _pips, _tPips, _riskDollar, _rewardPct, _rewardDollar, _tUsd, _slUsd]) {
+    for (final c in [_ent, _sl, _tp, _lots, _pips, _tPips, _riskDollar, _rewardPct, _rewardDollar]) {
       c.clear();
     }
     _risk.text = '1';
@@ -283,8 +284,6 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
       _lots.text = _r!.lots.toStringAsFixed(2);
       _pips.text = _f2(_r!.slPips);
       _tPips.text = _f2(_r!.tpPips);
-      _tUsd.text = _r!.profitUsd.toStringAsFixed(2);
-      _slUsd.text = _r!.lossUsd.toStringAsFixed(2);
     }
 
     _ac.forward(from: 0);
@@ -373,7 +372,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
                         border: Border.all(color: _isBuy ? Colors.green : Colors.transparent),
                       ),
                       alignment: Alignment.center,
-                      child: Text('BUY', style: TextStyle(color: _isBuy ? Colors.greenAccent : text, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                      child: Text('Buy', style: TextStyle(color: _isBuy ? Colors.greenAccent : text, fontWeight: FontWeight.bold, letterSpacing: 1)),
                     ),
                   ),
                 ),
@@ -393,7 +392,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
                         border: Border.all(color: !_isBuy ? Colors.red : Colors.transparent),
                       ),
                       alignment: Alignment.center,
-                      child: Text('SELL', style: TextStyle(color: !_isBuy ? Colors.redAccent : text, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                      child: Text('Sell', style: TextStyle(color: !_isBuy ? Colors.redAccent : text, fontWeight: FontWeight.bold, letterSpacing: 1)),
                     ),
                   ),
                 ),
@@ -427,13 +426,14 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
 
               _sec('RISK', sub),
               const SizedBox(height: 8),
-              if (_rrMode == 0 || _rrMode == 1) _inpRow('Risk % of balance', _risk, '', isDark, text, dirColor),
-              if (_rrMode == 2) _inpRow('Risk amount (usd)', _riskDollar, '', isDark, text, dirColor),
+              if (_rrMode == 0) _inpRow('Risk ( : )', _risk, '', isDark, text, dirColor),
+              if (_rrMode == 1) _inpRow('Risk ( % )', _risk, '', isDark, text, dirColor),
+              if (_rrMode == 2) _inpRow('Risk ( \$ )', _riskDollar, '', isDark, text, dirColor),
               const SizedBox(height: 20),
 
-              if (_rrMode == 0) _inpRow('Reward ratio 1 :', _rr, '', isDark, text, dirColor),
-              if (_rrMode == 1) _inpRow('Reward % of balance', _rewardPct, '', isDark, text, dirColor),
-              if (_rrMode == 2) _inpRow('Profit target (usd)', _rewardDollar, '', isDark, text, dirColor),
+              if (_rrMode == 0) _inpRow('Reward ( : )', _rr, '', isDark, text, dirColor),
+              if (_rrMode == 1) _inpRow('Reward ( % )', _rewardPct, '', isDark, text, dirColor),
+              if (_rrMode == 2) _inpRow('Reward ( \$ )', _rewardDollar, '', isDark, text, dirColor),
               const SizedBox(height: 20),
               
               _sec('TARGET & STOP LOSS', sub),
@@ -448,12 +448,6 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
                 Expanded(child: _inpCol('Target pips', _tPips, '', isDark, text, dirColor)),
                 const SizedBox(width: 12),
                 Expanded(child: _inpCol('Stop loss pips', _pips, '', isDark, text, dirColor)),
-              ]),
-              const SizedBox(height: 8),
-              Row(children: [
-                Expanded(child: _inpCol('Target (usd)', _tUsd, '', isDark, text, dirColor)),
-                const SizedBox(width: 12),
-                Expanded(child: _inpCol('Stop loss (usd)', _slUsd, '', isDark, text, dirColor)),
               ]),
               const SizedBox(height: 20),
               _sec('LOT SIZE', sub),
