@@ -87,8 +87,8 @@ class CalculatorScreen extends StatefulWidget {
 class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateMixin {
   final _bal  = TextEditingController();
   final _ent  = TextEditingController();
-  final _risk = TextEditingController(text: '1');
-  final _rr   = TextEditingController(text: '1');
+  final _risk = TextEditingController();
+  final _rr   = TextEditingController();
   final _sl   = TextEditingController();
   final _tp   = TextEditingController();
   final _lots = TextEditingController();
@@ -404,7 +404,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
               const SizedBox(height: 8),
               _inpRow('Amount', _bal, '', isDark, text, dirColor),
               const SizedBox(height: 8),
-              _inpRow('Entry Price', _ent, '', isDark, text, dirColor),
+              _inpRow('Entry price', _ent, '', isDark, text, dirColor),
               const SizedBox(height: 20),
 
               _sec('RISK : REWARD', sub),
@@ -420,45 +420,45 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
                   const SizedBox(width: 4),
                   _rrTab('Percent ( % )', 1, dirColor, isDark, text),
                   const SizedBox(width: 4),
-                  _rrTab('USD ( \$ )', 2, dirColor, isDark, text),
+                  _rrTab('Usd ( \$ )', 2, dirColor, isDark, text),
                 ]),
               ),
               const SizedBox(height: 20),
 
               _sec('RISK', sub),
               const SizedBox(height: 8),
-              if (_rrMode == 0 || _rrMode == 1) _inpRow('RISK % OF BALANCE', _risk, 'e.g. 1 means 1%', isDark, text, dirColor),
-              if (_rrMode == 2) _inpRow('RISK AMOUNT (USD)', _riskDollar, 'e.g. 100', isDark, text, dirColor),
+              if (_rrMode == 0 || _rrMode == 1) _inpRow('Risk % of balance', _risk, '', isDark, text, dirColor),
+              if (_rrMode == 2) _inpRow('Risk amount (usd)', _riskDollar, '', isDark, text, dirColor),
               const SizedBox(height: 20),
 
-              if (_rrMode == 0) _inpRow('REWARD RATIO   1 :', _rr, 'e.g. 3 means 1:3', isDark, text, dirColor),
-              if (_rrMode == 1) _inpRow('REWARD % OF BALANCE', _rewardPct, 'e.g. 3%', isDark, text, dirColor),
-              if (_rrMode == 2) _inpRow('PROFIT TARGET (USD)', _rewardDollar, 'e.g. 500', isDark, text, dirColor),
+              if (_rrMode == 0) _inpRow('Reward ratio 1 :', _rr, '', isDark, text, dirColor),
+              if (_rrMode == 1) _inpRow('Reward % of balance', _rewardPct, '', isDark, text, dirColor),
+              if (_rrMode == 2) _inpRow('Profit target (usd)', _rewardDollar, '', isDark, text, dirColor),
               const SizedBox(height: 20),
               
-              _sec('Target & Stop Loss', sub),
+              _sec('TARGET & STOP LOSS', sub),
               const SizedBox(height: 8),
               Row(children: [
-                Expanded(child: _inpCol('TARGET', _tp, '', isDark, text, dirColor)),
+                Expanded(child: _inpCol('Target', _tp, '', isDark, text, dirColor)),
                 const SizedBox(width: 12),
-                Expanded(child: _inpCol('STOP LOSS', _sl, '', isDark, text, dirColor)),
+                Expanded(child: _inpCol('Stop loss', _sl, '', isDark, text, dirColor)),
               ]),
               const SizedBox(height: 8),
               Row(children: [
-                Expanded(child: _inpCol('TP PIPS', _tPips, 'Auto', isDark, text, dirColor)),
+                Expanded(child: _inpCol('Target pips', _tPips, '', isDark, text, dirColor)),
                 const SizedBox(width: 12),
-                Expanded(child: _inpCol('SL PIPS', _pips, 'Auto', isDark, text, dirColor)),
+                Expanded(child: _inpCol('Stop loss pips', _pips, '', isDark, text, dirColor)),
               ]),
               const SizedBox(height: 8),
               Row(children: [
-                Expanded(child: _inpCol(r'TARGET ( $ )', _tUsd, 'Auto', isDark, text, dirColor)),
+                Expanded(child: _inpCol('Target (usd)', _tUsd, '', isDark, text, dirColor)),
                 const SizedBox(width: 12),
-                Expanded(child: _inpCol(r'SL ( $ )', _slUsd, 'Auto', isDark, text, dirColor)),
+                Expanded(child: _inpCol('Stop loss (usd)', _slUsd, '', isDark, text, dirColor)),
               ]),
               const SizedBox(height: 20),
-              _sec('Lot Size', sub),
+              _sec('LOT SIZE', sub),
               const SizedBox(height: 8),
-              _inpRow('LOT SIZE', _lots, 'Auto calculate', isDark, text, dirColor),
+              _inpRow('Lot size', _lots, '', isDark, text, dirColor),
               const SizedBox(height: 24),
 
               if (_err != null) ...[
