@@ -138,7 +138,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
 
   void _clearAll() {
     FocusScope.of(context).unfocus();
-    for (final c in [_ent, _sl, _tp, _lots, _pips, _tPips, _riskDollar, _rewardPct, _rewardDollar, _rr]) {
+    for (final c in [_bal, _ent, _sl, _tp, _lots, _pips, _tPips, _riskDollar, _rewardPct, _rewardDollar, _rr]) {
       c.clear();
     }
     _risk.text = '1';
