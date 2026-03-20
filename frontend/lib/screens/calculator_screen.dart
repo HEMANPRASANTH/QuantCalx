@@ -168,7 +168,11 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
         break;
       case 1:
         final rewardPct = double.tryParse(_rewardPct.text);
-        final riskPctVal = double.tryParse(_risk.text);
+        double? riskPctVal = double.tryParse(_risk.text);
+        if (riskPctVal != null && riskPctVal > 1.0) {
+          riskPctVal = 1.0;
+          _risk.text = '1';
+        }
         if (riskPctVal != null && riskPctVal > 0 && rewardPct != null && rewardPct > 0) {
           r = riskPctVal;
           rr = rewardPct / r;
@@ -399,11 +403,13 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
               ]),
               const SizedBox(height: 20),
 
-              _sec('AMOUNT & ENTRY PRICE', sub),
+              _sec('AMOUNT & ENTRY PRICE & LOT SIZE', sub),
               const SizedBox(height: 8),
               _inpRow('Amount', _bal, '', isDark, text, dirColor),
               const SizedBox(height: 8),
               _inpRow('Entry price', _ent, '', isDark, text, dirColor),
+              const SizedBox(height: 8),
+              _inpRow('Lot size', _lots, '', isDark, text, dirColor),
               const SizedBox(height: 20),
 
               _sec('RISK : REWARD', sub),
@@ -426,7 +432,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
 
               _sec('RISK', sub),
               const SizedBox(height: 8),
-              if (_rrMode == 0) _inpRow('Risk ( : )', _risk, '', isDark, text, dirColor),
+              if (_rrMode == 0) _inpRow('Risk ( : )', _risk, '', isDark, text, dirColor, readOnly: true),
               if (_rrMode == 1) _inpRow('Risk ( % )', _risk, '', isDark, text, dirColor),
               if (_rrMode == 2) _inpRow('Risk ( \$ )', _riskDollar, '', isDark, text, dirColor),
               const SizedBox(height: 20),
@@ -449,10 +455,6 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
                 const SizedBox(width: 12),
                 Expanded(child: _inpCol('Stop loss pips', _pips, '', isDark, text, dirColor)),
               ]),
-              const SizedBox(height: 20),
-              _sec('LOT SIZE', sub),
-              const SizedBox(height: 8),
-              _inpRow('Lot size', _lots, '', isDark, text, dirColor),
               const SizedBox(height: 24),
 
               if (_err != null) ...[
@@ -542,10 +544,12 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
 
   Widget _rrTab(String label, int mode, Color accent, bool isDark, Color text) => Expanded(
     child: GestureDetector(
-      onTap: () => setState(() { _rrMode = mode; _r = null; _ac.reset(); }),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
+      behavior: HitTestBehavior.opaque,
+      onTap: () => setState(() { 
+        _rrMode = mode; _r = null; _ac.reset(); 
+        if (mode == 0) _risk.text = '1'; 
+      }),
+      child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
           color: _rrMode == mode ? accent : Colors.transparent,
@@ -584,7 +588,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
       ),
     ]);
 
-  Widget _inpRow(String label, TextEditingController ctrl, String hint, bool isDark, Color text, Color accent) =>
+  Widget _inpRow(String label, TextEditingController ctrl, String hint, bool isDark, Color text, Color accent, {bool readOnly = false}) =>
     Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
@@ -600,6 +604,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
         Expanded(
           flex: 3,
           child: TextField(
+            readOnly: readOnly,
             controller: ctrl,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: text),
