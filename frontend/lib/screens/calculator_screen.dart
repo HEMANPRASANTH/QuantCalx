@@ -116,10 +116,16 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
     super.initState();
     _ac = AnimationController(vsync: this, duration: const Duration(milliseconds: 380));
     _fade = CurvedAnimation(parent: _ac, curve: Curves.easeOut);
-    // Auto-mirror risk value into reward ratio (mode 0) when user types risk
+    
+    _risk.text = '1';
+
     _risk.addListener(() {
-      if (_rrMode == 0 && _rr.text.isEmpty) {
-        _rr.text = _risk.text;
+      if (_rrMode == 1) {
+        final v = double.tryParse(_risk.text);
+        if (v != null && v > 1.0) {
+          _risk.text = '1';
+          _risk.selection = const TextSelection.collapsed(offset: 1);
+        }
       }
     });
   }
@@ -130,14 +136,12 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  /// Clears all trade fields and resets results (keeps balance).
   void _clearAll() {
     FocusScope.of(context).unfocus();
-    for (final c in [_ent, _sl, _tp, _lots, _pips, _tPips, _riskDollar, _rewardPct, _rewardDollar]) {
+    for (final c in [_ent, _sl, _tp, _lots, _pips, _tPips, _riskDollar, _rewardPct, _rewardDollar, _rr]) {
       c.clear();
     }
     _risk.text = '1';
-    _rr.text   = '1';
     setState(() { _r = null; _err = null; _ac.reset(); });
   }
 
@@ -468,7 +472,7 @@ class _CalcState extends State<CalculatorScreen> with SingleTickerProviderStateM
               ],
 
               // CALCULATE button
-              _GlowBtn(label: _isBuy ? '▲  CALCULATE BUY' : '▼  CALCULATE SELL', color: dirColor, onTap: _calculate),
+              _GlowBtn(label: 'Calculate', color: dirColor, onTap: _calculate),
 
               // Results
               if (_r != null)
